@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Full Frontend Mockup — OUROBORUS</title>
+
+<!-- Supabase UMD -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+
+<style>
+  /* Basic polished layout */
+  :root {
+    --bg1: #071020;
+    --panel: #071727;
+    --muted: #9fb0c8;
+    --accent: #06b6d4;
+    --accent-2: #7c3aed;
+    color-scheme: dark;
+  }
+  html,body { height:100%; margin:0; background: linear-gradient(180deg,#04101a 0%, #03121a 100%); font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#e6eef6; }
+  .app { display:grid; grid-template-columns:300px 1fr; gap:16px; padding:16px; height:100vh; box-sizing:border-box; }
+  .sidebar { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,0.03); overflow:auto; }
+  .main { border-radius:12px; padding:12px; overflow:auto; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006)); border:1px solid rgba(255,255,255,0.02); }
+  .brand { font-weight:800; letter-spacing:1.5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .nav { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .nav button { padding:10px 12px; background:transparent; border:1px solid rgba(255,255,255,0.03); color:var(--muted); border-radius:8px; text-align:left; cursor:pointer; }
+  .nav button.active { background: linear-gradient(90deg,var(--accent), var(--accent-2)); color:#022; box-shadow:0 6px 18px rgba(6,182,212,0.08); font-weight:700; border:0; }
+  .small { font-size:13px; color:var(--muted); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+  input[type="text"], input[type="number"], select, textarea, input[type="date"]{ padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; width:100%; box-sizing:border-box;}
+  .btn { background:var(--accent); color:#022; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); }
+  .card { padding:10px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.02); background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006)); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:8px 10px; border-bottom:1px dashed rgba(255,255,255,0.03); text-align:left; vertical-align:top; }
+  th { background: rgba(255,255,255,0.02); position: sticky; top:0; }
+  .flex { display:flex; gap:8px; align-items:center; }
+  .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:2000; }
+  .modal.open { display:flex; }
+  .modal-card { width:880px; max-width:96%; background:var(--panel); border-radius:10px; padding:14px; box-shadow:0 20px 60px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.02); }
+  .tag { padding:6px 8px; border-radius:999px; background:rgba(255,255,255,0.02); color:var(--muted); font-size:12px; }
+  .status-paid { background: rgba(6,182,212,0.12); color:#8eeef9; padding:4px 8px; border-radius:999px; }
+  .status-unpaid { background: rgba(255,10,40,0.06); color:#ffb3b3; padding:4px 8px; border-radius:999px; }
+  pre.json { background: rgba(0,0,0,0.2); padding:8px; border-radius:6px; max-height:320px; overflow:auto; }
+  .small-muted { font-size:12px; color:var(--muted); }
+  @media (max-width:980px){ .app{grid-template-columns:1fr; padding:10px;} .sidebar{order:2; display:flex; gap:6px; overflow:auto;} .nav{flex-direction:row;} }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <div class="brand">
+        <div>OUROBORUS SCHOOL</div>
+        <div class="small-muted tag">Admin (no auth)</div>
+      </div>
+
+      <div class="small">Quick navigation</div>
+      <div id="nav" class="nav"></div>
+
+      <div style="margin-top:10px;" class="small">Actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <button class="btn" id="btnNewStudent">+ New student</button>
+        <button class="btn ghost" id="btnNewCustomTab">+ New custom tab</button>
+        <button class="btn ghost" id="btnAutoSession">Auto-create session</button>
+        <button class="btn ghost" id="btnPromote">Promote students</button>
+      </div>
+
+      <div style="margin-top:14px;" class="small-muted">Connected to</div>
+      <div style="margin-top:6px;" id="projectInfo" class="tag">supabase project</div>
+      <div style="margin-top:10px;" class="small-muted">Notes</div>
+      <div class="small" style="margin-top:6px;">This mockup persists everything to your DB. Uses JSONB custom tabs by default — if you want one table per custom tab later I can add a migration tool.</div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="globalSearch" type="text" placeholder="Search (students, payments, items...)" style="width:380px;" />
+          <button class="btn ghost" id="btnSearch">Search</button>
+          <div id="status" class="small-muted">Connecting…</div>
+        </div>
+
+        <div class="flex">
+          <select id="viewSelect">
+            <option value="students">Students</option>
+            <option value="joined">Students (joined view)</option>
+            <option value="payments">Tuition Payments</option>
+            <option value="items">Item Payments</option>
+            <option value="classes">Classes</option>
+            <option value="sessions">Sessions & terms</option>
+            <option value="customs">Custom Tabs</option>
+            <option value="finance">Finance</option>
+            <option value="raw">Raw table viewer</option>
+          </select>
+          <button class="btn ghost" id="btnRefresh">Refresh</button>
+          <button class="btn" id="btnExport">Export CSV</button>
+        </div>
+      </div>
+
+      <div id="workspace">
+        <!-- students table -->
+        <div id="view_students" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div><strong>Students</strong> <span id="students_count" class="small-muted"></span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="filter_class"><option value="">All classes</option></select>
+              <button class="btn ghost" id="btnFilter">Filter</button>
+              <button class="btn" id="btnExportStudents">Export Students CSV</button>
+            </div>
+          </div>
+
+          <div style="overflow:auto;max-height:60vh;">
+            <table id="tbl_students">
+              <thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Age</th><th>Deposit</th><th>Unpaid</th><th>Scholar</th><th>Promote?</th><th>Actions</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- joined students -->
+        <div id="view_joined" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Students (joined) — student + class + current-term payment</strong></div>
+            <div class="small-muted">Current session & term are picked automatically</div>
+          </div>
+          <div style="overflow:auto; max-height:60vh;">
+            <table id="tbl_joined"><thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Expected</th><th>Paid</th><th>Status</th><th>Edit Paid</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <!-- payments -->
+        <div id="view_payments" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Tuition payments</strong></div>
+            <div class="small-muted">Edit amount paid directly, status recalculated automatically</div>
+          </div>
+          <div style="overflow:auto; max-height:60vh;">
+            <table id="tbl_payments"><thead><tr><th>ID</th><th>Student</th><th>Class</th><th>Expected</th><th>Paid</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <!-- items -->
+        <div id="view_items" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Item / Uniform payments</strong></div>
+            <div><button class="btn ghost" id="btnAddItem">Add item payment</button></div>
+          </div>
+          <div style="overflow:auto; max-height:60vh;">
+            <table id="tbl_items"><thead><tr><th>ID</th><th>Student</th><th>Item</th><th>Amount</th><th>Deposit</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <!-- classes -->
+        <div id="view_classes" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Classes</strong></div>
+            <div><button class="btn" id="btnAddClass">+ Class</button></div>
+          </div>
+          <div style="overflow:auto; max-height:60vh;">
+            <table id="tbl_classes"><thead><tr><th>ID</th><th>Name</th><th>Payment type</th><th>Display order</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <!-- sessions -->
+        <div id="view_sessions" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Sessions & Terms</strong></div>
+            <div style="display:flex;gap:8px;">
+              <input id="sessionName" placeholder="e.g., 2025/2026" />
+              <input id="firstTermStart" type="date" />
+              <button class="btn" id="btnCreateSession">Create session</button>
+            </div>
+          </div>
+          <div style="overflow:auto; max-height:50vh;">
+            <table id="tbl_sessions"><thead><tr><th>ID</th><th>Name</th><th>Created</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          </div>
+          <div style="margin-top:8px;" class="small-muted">After creating, terms will be added: 3 x 13 weeks with holidays (3-week and 7-week rules).</div>
+        </div>
+
+        <!-- custom tabs -->
+        <div id="view_customs" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Custom Tabs</strong></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="btnCreateCustom">Create custom tab</button>
+            </div>
+          </div>
+          <div id="customTabsContainer" style="overflow:auto;max-height:60vh;"></div>
+        </div>
+
+        <!-- finance -->
+        <div id="view_finance" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div><strong>Expenses & Bank receipts</strong></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="btnAddExpense">Add expense</button>
+              <button class="btn ghost" id="btnAddBank">Add bank receipt</button>
+            </div>
+          </div>
+          <div style="overflow:auto;max-height:60vh;">
+            <table id="tbl_expenses"><thead><tr><th>ID</th><th>Category</th><th>Amount</th><th>Date</th><th>Note</th><th>Actions</th></tr></thead><tbody></tbody></table>
+            <hr/>
+            <table id="tbl_bank"><thead><tr><th>ID</th><th>Payer</th><th>Amount</th><th>Date</th><th>Actions</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <!-- raw viewer -->
+        <div id="view_raw" class="card" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div><strong>Raw table viewer</strong></div>
+            <div style="display:flex;gap:8px;"><select id="rawTableSelect"></select><button class="btn" id="btnLoadRaw">Load</button></div>
+          </div>
+          <div id="rawContainer" style="overflow:auto;max-height:70vh;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- modal -->
+  <div id="modal" class="modal"><div id="modalCard" class="modal-card"></div></div>
+
+<script>
+/* =========================
+   Supabase init
+   ========================= */
+const SUPABASE_URL = 'https://spzybhvzqnlyhulvewqj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwenliaHZ6cW5seWh1bHZld3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNDA5NzksImV4cCI6MjA3MDYxNjk3OX0.yxiun4aZkDqtWBo928ujTotbDx4I8QCJ8D0tcXb7KDM';
+const { createClient } = supabase;
+const supa = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* =========================
+   App state
+   ========================= */
+const TABLES_CORE = ['students','classes','sessions','terms','tuition','tuition_payments','item_payments','bank_receipts','expenses','custom_tabs','custom_tab_rows','custom_tab_data'];
+let app = {
+  currentView: 'students',
+  cache: {},
+  subscriptions: [],
+  use_custom_tab_rows: true // we'll detect below which custom table to use
+};
+
+/* =========================
+   DOM helpers
+   ========================= */
+const $ = id => document.getElementById(id);
+function showModal(html){ $('modalCard').innerHTML = html; $('modal').classList.add('open'); }
+function closeModal(){ $('modal').classList.remove('open'); $('modalCard').innerHTML = ''; }
+document.getElementById('modal').addEventListener('click', (e)=>{ if (e.target.id === 'modal') closeModal(); });
+
+/* =========================
+   Utility functions
+   ========================= */
+function esc(s){ if (s === null || s === undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function csvDownload(filename, rows){
+  if (!rows.length) { alert('No rows'); return; }
+  const keys = Array.from(rows.reduce((acc,row)=>{ Object.keys(row).forEach(k=>acc.add(k)); return acc; }, new Set()));
+  const csv = [keys.join(',')].concat(rows.map(r=> keys.map(k => {
+    const v = r[k];
+    if (v===null || v===undefined) return '';
+    if (typeof v === 'object') return '"' + JSON.stringify(v).replace(/"/g,'""') + '"';
+    return '"' + String(v).replace(/"/g,'""') + '"';
+  }).join(',')));
+  const blob = new Blob([csv.join('\\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* =========================
+   Schema detection & initial load
+   ========================= */
+async function detectSchemaAndLoad(){
+  try {
+    // try to select from custom_tab_rows to see if present
+    const tryRows = await supa.from('custom_tab_rows').select('id').limit(1);
+    if (!tryRows.error) { app.use_custom_tab_rows = true; }
+    else {
+      // fallback to custom_tab_data
+      const tryData = await supa.from('custom_tab_data').select('id').limit(1);
+      if (!tryData.error) { app.use_custom_tab_rows = false; }
+      else {
+        // neither exists — still okay; we'll create rows in whichever exists later
+        app.use_custom_tab_rows = true;
+      }
+    }
+  } catch (e) {
+    console.warn('schema detect', e);
+  }
+  $('projectInfo').textContent = SUPABASE_URL.split('//')[1].split('.')[0] + ' (admin)';
+  $('status').textContent = 'Connected (admin anon key)';
+  renderNav();
+  await refreshAll(); // initial load
+  startRealtime();
+}
+
+/* =========================
+   Render navigation
+   ========================= */
+function renderNav(){
+  const nav = $('nav'); nav.innerHTML = '';
+  const items = [
+    {k:'students', label:'Students'},
+    {k:'joined', label:'Students (joined)'},
+    {k:'payments', label:'Payments'},
+    {k:'items', label:'Item payments'},
+    {k:'classes', label:'Classes'},
+    {k:'sessions', label:'Sessions'},
+    {k:'customs', label:'Custom tabs'},
+    {k:'finance', label:'Finance'},
+    {k:'raw', label:'Raw viewer'}
+  ];
+  items.forEach(it=>{
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    b.onclick = ()=> { setView(it.k); };
+    b.id = 'nav-' + it.k;
+    nav.appendChild(b);
+  });
+  updateActiveNav();
+}
+
+/* =========================
+   View switching
+   ========================= */
+function updateActiveNav(){
+  const ids = ['students','joined','payments','items','classes','sessions','customs','finance','raw'];
+  ids.forEach(id => {
+    const el = document.getElementById('nav-' + id);
+    if (!el) return;
+    el.classList.toggle('active', app.currentView === id);
+  });
+  // also set select
+  $('viewSelect').value = app.currentView;
+}
+
+function setView(view){
+  app.currentView = view;
+  updateActiveNav();
+  document.querySelectorAll('[id^="view_"]').forEach(el=>el.style.display='none');
+  const sel = document.getElementById('view_' + view);
+  if (sel) sel.style.display = 'block';
+  else document.getElementById('view_students').style.display = 'block';
+  // refresh data for view
+  switch(view){
+    case 'students': loadStudents(); break;
+    case 'joined': loadJoined(); break;
+    case 'payments': loadPayments(); break;
+    case 'items': loadItems(); break;
+    case 'classes': loadClasses(); break;
+    case 'sessions': loadSessions(); break;
+    case 'customs': loadCustomTabs(); break;
+    case 'finance': loadFinance(); break;
+    case 'raw': loadRawSelector(); break;
+  }
+}
+
+/* =========================
+   Refresh / load core tables
+   ========================= */
+async function refreshAll(){
+  // fetch main tables in parallel (safe)
+  const [
+    {data: students, error: e1},
+    {data: classes, error: e2},
+    {data: sessions, error: e3},
+    {data: terms, error: e4},
+    {data: tuition, error: e5},
+    {data: tuition_payments, error: e6},
+    {data: item_payments, error: e7},
+    {data: bank_receipts, error: e8},
+    {data: expenses, error: e9},
+    {data: custom_tabs, error: e10},
+    {data: custom_tab_rows, error: e11}
+  ] = await Promise.all([
+    supa.from('students').select('*'),
+    supa.from('classes').select('*'),
+    supa.from('sessions').select('*'),
+    supa.from('terms').select('*'),
+    supa.from('tuition').select('*'),
+    supa.from('tuition_payments').select('*'),
+    supa.from('item_payments').select('*'),
+    supa.from('bank_receipts').select('*'),
+    supa.from('expenses').select('*'),
+    supa.from('custom_tabs').select('*'),
+    (app.use_custom_tab_rows ? supa.from('custom_tab_rows').select('*') : supa.from('custom_tab_data').select('*'))
+  ]);
+  app.cache.students = students || [];
+  app.cache.classes = classes || [];
+  app.cache.sessions = sessions || [];
+  app.cache.terms = terms || [];
+  app.cache.tuition = tuition || [];
+  app.cache.tuition_payments = tuition_payments || [];
+  app.cache.item_payments = item_payments || [];
+  app.cache.bank_receipts = bank_receipts || [];
+  app.cache.expenses = expenses || [];
+  app.cache.custom_tabs = custom_tabs || [];
+  app.cache.custom_tab_rows = custom_tab_rows || [];
+  // update small UI counts
+  $('students_count').textContent = `(${app.cache.students.length} students)`;
+  // populate filter class
+  const f = $('filter_class'); f.innerHTML = '<option value="">All classes</option>';
+  app.cache.classes.forEach(c => f.innerHTML += `<option value="${c.id}">${esc(c.name)}</option>`);
+  // populate raw table selector
+  const rawSel = $('rawTableSelect'); rawSel.innerHTML = '';
+  (await getExistingTables()).forEach(t => rawSel.innerHTML += `<option value="${t}">${t}</option>`);
+}
+
+/* get existing table list (public schema) */
+async function getExistingTables(){
+  // Use the system view 'information_schema.tables' via supa.from — it works
+  try {
+    const { data } = await supa.from('information_schema.tables').select('table_name').eq('table_schema','public');
+    if (!data) return [];
+    return data.map(r => r.table_name).sort();
+  } catch(e){
+    return ['students','classes','sessions','terms','tuition','tuition_payments','item_payments','bank_receipts','expenses','custom_tabs','custom_tab_rows'];
+  }
+}
+
+/* =========================
+   Students UI
+   ========================= */
+async function loadStudents(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_students tbody'); tbody.innerHTML = '';
+  const classesMap = Object.fromEntries((app.cache.classes||[]).map(c=>[c.id,c]));
+  (app.cache.students||[]).forEach(s => {
+    const tr = document.createElement('tr');
+    const cls = classesMap[s.class_id] ? esc(classesMap[s.class_id].name) : '—';
+    tr.innerHTML = `
+      <td>${s.id}</td>
+      <td><strong>${esc(s.first_name||'')} ${esc(s.last_name||'')}</strong></td>
+      <td>${cls}</td>
+      <td>${esc(s.age||'')}</td>
+      <td>${esc(s.amt_deposit||0)}</td>
+      <td>${esc(s.unpaid_balance||0)}</td>
+      <td>${s.is_scholarship?'<span class="tag">SCHOLAR</span>':''}</td>
+      <td>${s.promote_next===false?'<span class="tag" style="background:rgba(255,20,20,0.06)">NO</span>':'<span class="tag">YES</span>'}</td>
+      <td>
+        <button class="btn ghost" onclick="openEditStudent(${s.id})">Edit</button>
+        <button class="btn" onclick="deleteStudent(${s.id})">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* Create/edit student */
+document.getElementById('btnNewStudent').addEventListener('click', ()=> openEditStudent());
+async function openEditStudent(id){
+  let s = null;
+  if (id) s = app.cache.students.find(x=>x.id===id);
+  const classesOptions = (app.cache.classes||[]).map(c=>`<option value="${c.id}" ${s && s.class_id===c.id ? 'selected': ''}>${esc(c.name)}</option>`).join('');
+  showModal(`
+    <h3>${s?'Edit':'New'} student</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label class="small-muted">First name</label><input id="in_first" value="${s?esc(s.first_name):''}" /></div>
+      <div><label class="small-muted">Last name</label><input id="in_last" value="${s?esc(s.last_name):''}" /></div>
+      <div><label class="small-muted">Class</label><select id="in_class"><option value="">--</option>${classesOptions}</select></div>
+      <div><label class="small-muted">Age</label><input id="in_age" type="number" value="${s?esc(s.age||''):''}" /></div>
+      <div><label class="small-muted">Deposit paid</label><input id="in_deposit" type="number" value="${s?esc(s.amt_deposit||0):0}" /></div>
+      <div><label class="small-muted">Unpaid balance</label><input id="in_unpaid" type="number" value="${s?esc(s.unpaid_balance||0):0}" /></div>
+      <div><label class="small-muted">Scholarship?</label>
+        <select id="in_scholar"><option value="false">No</option><option value="true">Yes</option></select>
+      </div>
+      <div><label class="small-muted">Promote at session end?</label>
+        <select id="in_promote"><option value="true">Yes (default)</option><option value="false">No</option></select>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="saveStudent">${s?'Save':'Create'}</button>
+    </div>
+  `);
+  if (s) {
+    $('in_scholar').value = s.is_scholarship ? 'true' : 'false';
+    $('in_promote').value = (s.promote_next === false) ? 'false' : 'true';
+  }
+  $('saveStudent').onclick = async ()=>{
+    const payload = {
+      first_name: $('in_first').value.trim(),
+      last_name: $('in_last').value.trim(),
+      class_id: $('in_class').value || null,
+      age: $('in_age').value ? Number($('in_age').value) : null,
+      amt_deposit: Number($('in_deposit').value || 0),
+      unpaid_balance: Number($('in_unpaid').value || 0),
+      is_scholarship: $('in_scholar').value === 'true',
+      promote_next: $('in_promote').value === 'true'
+    };
+    try {
+      if (s && s.id) {
+        const { error } = await supa.from('students').update(payload).eq('id', s.id);
+        if (error) throw error;
+        // Optionally update tuition_payments.amount_paid based on student.amt_deposit for current session/term
+        await syncStudentDepositToPayments(s.id, payload.amt_deposit);
+        alert('Student updated');
+      } else {
+        const { data, error } = await supa.from('students').insert([payload]).select().single();
+        if (error) throw error;
+        alert('Student created');
+      }
+      closeModal();
+      await refreshAll();
+      await loadStudents();
+    } catch (e) {
+      alert('Error: ' + (e.message || e));
+    }
+  };
+}
+
+/* sync student deposit to tuition_payments for current session's first term (best effort) */
+async function syncStudentDepositToPayments(student_id, depositAmount){
+  try {
+    // find active session (first in sessions for simplicity)
+    if (!app.cache.sessions || !app.cache.sessions.length) return;
+    const sessionId = app.cache.sessions[0].id;
+    // find first term for that session
+    const term = app.cache.terms.find(t => t.session_id === sessionId);
+    if (!term) return;
+    // update tuition_payments for that student
+    const { error } = await supa.from('tuition_payments').update({ amount_paid: depositAmount }).match({ student_id, session_id: sessionId, term_id: term.id });
+    if (error) console.warn('syncStudentDepositToPayments error', error);
+    else {
+      // recalc status
+      const payments = (await supa.from('tuition_payments').select('*').match({ student_id, session_id: sessionId, term_id: term.id })).data || [];
+      for (const p of payments){
+        const expected = Number(p.amount_expected || 0);
+        const paid = Number(p.amount_paid || 0);
+        let status = 'unpaid';
+        if (p.is_scholarship) status = 'scholarship';
+        else if (paid === 0) status = 'unpaid';
+        else if (paid >= expected) status = 'paid';
+        else status = 'partial';
+        await supa.from('tuition_payments').update({ status }).eq('id', p.id);
+      }
+      await refreshAll();
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+/* delete student */
+async function deleteStudent(id){
+  if (!confirm('Delete student id ' + id + '?')) return;
+  try {
+    const { error } = await supa.from('students').delete().eq('id', id);
+    if (error) throw error;
+    await refreshAll(); loadStudents();
+  } catch(e){ alert('Error: '+(e.message||e)); }
+}
+
+/* =========================
+   Joined view (student + payment)
+   ========================= */
+async function loadJoined(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_joined tbody'); tbody.innerHTML = '';
+  const classesMap = Object.fromEntries((app.cache.classes||[]).map(c=>[c.id,c]));
+  // pick current session and first term
+  const session = app.cache.sessions && app.cache.sessions[0];
+  const term = app.cache.terms && app.cache.terms.filter(t=>t.session_id === (session ? session.id : null)).sort((a,b)=>a.term_index-b.term_index)[0];
+  const paymentsMap = Object.fromEntries((app.cache.tuition_payments||[]).map(p => [p.student_id, p]));
+  (app.cache.students||[]).forEach(s=>{
+    const pay = paymentsMap[s.id];
+    const cls = classesMap[s.class_id];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.id}</td>
+      <td>${esc(s.first_name||'')} ${esc(s.last_name||'')}</td>
+      <td>${cls?esc(cls.name):'—'}</td>
+      <td>${pay?esc(pay.amount_expected||0):'—'}</td>
+      <td>${pay?esc(pay.amount_paid||0):'—'}</td>
+      <td>${pay?'<span class="'+(pay.status==='paid'?'status-paid':'status-unpaid')+'">'+esc(pay.status)+'</span>':'—'}</td>
+      <td>${pay? (pay.payment_date || ''): ''}</td>
+      <td>${pay ? `<input style="width:90px;padding:6px;border-radius:6px" id="pay_edit_${pay.id}" value="${pay.amount_paid || 0}" /> <button class="btn" onclick="updatePaymentAmount(${pay.id})">Save</button>` : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* update payment amount directly from joined or payments view */
+async function updatePaymentAmount(paymentId){
+  const input = document.getElementById('pay_edit_' + paymentId);
+  if (!input) return;
+  const newAmt = Number(input.value || 0);
+  try {
+    // fetch payment row to get expected and is_scholarship
+    const { data: p } = await supa.from('tuition_payments').select('*').eq('id', paymentId).single();
+    if (!p) return alert('Payment row not found');
+    let newStatus = 'unpaid';
+    if (p.is_scholarship) newStatus = 'scholarship';
+    else if (newAmt === 0) newStatus = 'unpaid';
+    else if (newAmt >= Number(p.amount_expected || 0)) newStatus = 'paid';
+    else newStatus = 'partial';
+    const { error } = await supa.from('tuition_payments').update({ amount_paid: newAmt, status: newStatus }).eq('id', paymentId);
+    if (error) throw error;
+    alert('Payment updated');
+    await refreshAll(); loadPayments();
+    if (app.currentView === 'joined') loadJoined();
+  } catch(e){ alert('Error: '+(e.message||e)); }
+}
+
+/* =========================
+   Payments view
+   ========================= */
+async function loadPayments(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_payments tbody'); tbody.innerHTML = '';
+  const studentsMap = Object.fromEntries((app.cache.students||[]).map(s=>[s.id,s]));
+  const classesMap = Object.fromEntries((app.cache.classes||[]).map(c=>[c.id,c]));
+  (app.cache.tuition_payments||[]).forEach(p=>{
+    const s = studentsMap[p.student_id] || {};
+    const cls = classesMap[s.class_id] || {};
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.id}</td>
+      <td>${esc(s.first_name||'')} ${esc(s.last_name||'')}</td>
+      <td>${esc(cls.name||'')}</td>
+      <td>${esc(p.amount_expected||0)}</td>
+      <td>${esc(p.amount_paid||0)}</td>
+      <td>${esc(p.status||'')}</td>
+      <td>${p.payment_date||''}</td>
+      <td>
+        <button class="btn ghost" onclick="editPayment(${p.id})">Edit</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* edit payment modal */
+async function editPayment(id){
+  const p = (await supa.from('tuition_payments').select('*').eq('id',id).single()).data;
+  if (!p) return alert('Not found');
+  const student = app.cache.students.find(s=>s.id===p.student_id) || {};
+  showModal(`
+    <h3>Edit payment #${p.id}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><label class="small-muted">Student</label><div>${esc(student.first_name||'')} ${esc(student.last_name||'')}</div></div>
+      <div><label class="small-muted">Expected</label><div>${esc(p.amount_expected||0)}</div></div>
+      <div><label class="small-muted">Amount paid</label><input id="edit_paid" type="number" value="${esc(p.amount_paid||0)}" /></div>
+      <div><label class="small-muted">Payment date</label><input id="edit_date" type="date" value="${p.payment_date ? p.payment_date.split('T')[0] : ''}" /></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="savePayment">Save</button>
+    </div>
+  `);
+  $('savePayment').onclick = async ()=>{
+    const amount_paid = Number($('edit_paid').value || 0);
+    const expected = Number(p.amount_expected || 0);
+    let newStatus = 'unpaid';
+    if (p.is_scholarship) newStatus = 'scholarship';
+    else if (amount_paid === 0) newStatus = 'unpaid';
+    else if (amount_paid >= expected) newStatus = 'paid';
+    else newStatus = 'partial';
+    try {
+      const { error } = await supa.from('tuition_payments').update({ amount_paid, status: newStatus, payment_date: $('edit_date').value || null }).eq('id', p.id);
+      if (error) throw error;
+      alert('Saved');
+      closeModal();
+      await refreshAll(); loadPayments(); if (app.currentView==='joined') loadJoined();
+    } catch(e){ alert('Error: '+(e.message||e)); }
+  };
+}
+
+/* =========================
+   Item payments
+   ========================= */
+document.getElementById('btnAddItem').addEventListener('click', ()=> openAddItem());
+async function loadItems(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_items tbody'); tbody.innerHTML = '';
+  const studentsMap = Object.fromEntries((app.cache.students||[]).map(s=>[s.id,s]));
+  (app.cache.item_payments||[]).forEach(it=>{
+    const st = studentsMap[it.student_id] || {};
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.id}</td><td>${esc(st.first_name||'')} ${esc(st.last_name||'')}</td><td>${esc(it.item_name||'')}</td><td>${esc(it.amount||0)}</td><td>${esc(it.deposit||0)}</td><td>${it.date_paid||''}</td><td><button class="btn ghost" onclick="viewItem(${it.id})">View</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function viewItem(id){ const it = (app.cache.item_payments||[]).find(x=>x.id===id); alert(JSON.stringify(it,null,2)); }
+
+function openAddItem(){
+  const studentOptions = (app.cache.students||[]).map(s=>`<option value="${s.id}">${esc(s.first_name)} ${esc(s.last_name)}</option>`).join('');
+  showModal(`
+    <h3>Add item payment</h3>
+    <label>Student</label><select id="ai_student"><option value="">--select--</option>${studentOptions}</select>
+    <label>Item name</label><input id="ai_item" />
+    <label>Amount</label><input id="ai_amount" type="number" />
+    <label>Deposit</label><input id="ai_deposit" type="number" />
+    <label>Date</label><input id="ai_date" type="date" />
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="ai_save">Save</button></div>
+  `);
+  $('ai_save').onclick = async ()=>{
+    const payload = {
+      student_id: $('ai_student').value || null,
+      item_name: $('ai_item').value.trim(),
+      amount: Number($('ai_amount').value || 0),
+      deposit: Number($('ai_deposit').value || 0),
+      date_paid: $('ai_date').value || null,
+      created_at: new Date().toISOString()
+    };
+    try {
+      const { error } = await supa.from('item_payments').insert([payload]);
+      if (error) throw error;
+      closeModal(); await refreshAll(); loadItems();
+    } catch(e){ alert('Error: '+(e.message||e)); }
+  };
+}
+
+/* =========================
+   Classes
+   ========================= */
+document.getElementById('btnAddClass').addEventListener('click', ()=> openAddClass());
+async function loadClasses(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_classes tbody'); tbody.innerHTML = '';
+  (app.cache.classes||[]).forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.payment_type||'')}</td><td>${esc(c.display_order||'')}</td><td><button class="btn ghost" onclick="editClass(${c.id})">Edit</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function openAddClass(){
+  showModal(`<h3>New class</h3><label>Name</label><input id="c_name"/><label>Payment type</label><input id="c_pay"/><label>Display order</label><input id="c_order" type="number" /><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="saveClass">Save</button></div>`);
+  $('saveClass').onclick = async ()=>{
+    const payload = { name: $('c_name').value.trim(), payment_type: $('c_pay').value.trim(), display_order: Number($('c_order').value||0) };
+    const { error } = await supa.from('classes').insert([payload]);
+    if (error) alert('Error: '+error.message); else { closeModal(); await loadClasses(); }
+  };
+}
+async function editClass(id){
+  const c = (app.cache.classes||[]).find(x=>x.id===id);
+  if (!c) return alert('Class not found');
+  showModal(`<h3>Edit class</h3><label>Name</label><input id="c_name" value="${esc(c.name)}"/><label>Payment type</label><input id="c_pay" value="${esc(c.payment_type||'')}"/><label>Display order</label><input id="c_order" type="number" value="${esc(c.display_order||0)}"/><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="updClass">Save</button></div>`);
+  $('updClass').onclick = async ()=>{
+    const payload = { name: $('c_name').value.trim(), payment_type: $('c_pay').value.trim(), display_order: Number($('c_order').value||0) };
+    const { error } = await supa.from('classes').update(payload).eq('id', c.id);
+    if (error) alert('Error: '+error.message); else { closeModal(); await loadClasses(); }
+  };
+}
+
+/* =========================
+   Sessions auto-create (Nigeria calendar)
+   ========================= */
+document.getElementById('btnCreateSession').addEventListener('click', createSessionFromInputs);
+document.getElementById('btnAutoSession').addEventListener('click', () => {
+  // open small dialog to input session name and date
+  showModal(`<h3>Auto-create session</h3><label>Session name</label><input id="cs_name" placeholder="2025/2026"/><label>First term start</label><input id="cs_start" type="date" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="cs_create">Create</button></div>`);
+  $('cs_create').onclick = createSessionFromInputs;
+});
+
+async function createSessionFromInputs(){
+  const name = $('cs_name') ? $('cs_name').value.trim() : $('sessionName').value.trim();
+  const start = $('cs_start') ? $('cs_start').value : $('firstTermStart') ? $('firstTermStart').value : $('firstTermStart').value;
+  if (!name || !start) return alert('Provide session name and first term start date');
+  // compute dates
+  const firstStart = new Date(start);
+  const addDays = (d,days) => { const x=new Date(d); x.setDate(x.getDate()+days); return x; };
+  const firstEnd = addDays(firstStart, 91 - 1);
+  const firstHolidayEnd = addDays(firstEnd, 21);
+  const secondStart = addDays(firstHolidayEnd, 1);
+  const secondEnd = addDays(secondStart, 91 - 1);
+  const secondHolidayEnd = addDays(secondEnd, 21);
+  const thirdStart = addDays(secondHolidayEnd, 1);
+  const thirdEnd = addDays(thirdStart, 91 - 1);
+  const thirdHolidayEnd = addDays(thirdEnd, 49);
+
+  try {
+    const { data: session, error: se } = await supa.from('sessions').insert([{ name, created_at: new Date().toISOString() }]).select().single();
+    if (se) throw se;
+    const sid = session.id;
+    const termRows = [
+      { session_id: sid, term_index: 1, name: `FIRST TERM ${name}`, start_date: firstStart.toISOString().slice(0,10), end_date: firstEnd.toISOString().slice(0,10), weeks:13 },
+      { session_id: sid, term_index: 2, name: `SECOND TERM ${name}`, start_date: secondStart.toISOString().slice(0,10), end_date: secondEnd.toISOString().slice(0,10), weeks:13 },
+      { session_id: sid, term_index: 3, name: `THIRD TERM ${name}`, start_date: thirdStart.toISOString().slice(0,10), end_date: thirdEnd.toISOString().slice(0,10), weeks:13 }
+    ];
+    const { error: te } = await supa.from('terms').insert(termRows);
+    if (te) throw te;
+    alert(`Session ${name} created with 3 terms.`);
+    closeModal();
+    await refreshAll(); loadSessions();
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
+  }
+}
+
+async function loadSessions(){
+  await refreshAll();
+  const tbody = document.querySelector('#tbl_sessions tbody'); tbody.innerHTML = '';
+  (app.cache.sessions||[]).forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s.id}</td><td>${esc(s.name)}</td><td>${new Date(s.created_at).toLocaleString()}</td><td><button class="btn ghost" onclick="viewTerms(${s.id})">View terms</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function viewTerms(sessionId){
+  const terms = (app.cache.terms||[]).filter(t=>t.session_id===sessionId).sort((a,b)=>a.term_index-b.term_index);
+  showModal(`<h3>Terms</h3><pre class="json">${esc(JSON.stringify(terms,null,2))}</pre><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+
+/* =========================
+   Custom tabs (JSONB-backed)
+   ========================= */
+document.getElementById('btnCreateCustom').addEventListener('click', ()=> openCreateCustomModal());
+document.getElementById('btnNewCustomTab').addEventListener('click', ()=> openCreateCustomModal());
+
+async function loadCustomTabs(){
+  await refreshAll();
+  const cont = $('customTabsContainer'); cont.innerHTML = '';
+  (app.cache.custom_tabs||[]).forEach(tab => {
+    const rows = (app.cache.custom_tab_rows||[]).filter(r => r.custom_tab_id === tab.id);
+    const wrapper = document.createElement('div'); wrapper.className = 'card'; wrapper.style.marginBottom='8px';
+    const inner = document.createElement('div');
+    inner.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(tab.name)}</strong> <span class="small-muted">(${rows.length} rows)</span></div><div><button class="btn" onclick='openAddCustomRow(${JSON.stringify(tab).replace(/'/g,"&#39;")})'>Add row</button><button class="btn ghost" onclick='viewCustomRows(${tab.id})'>View</button></div></div>`;
+    wrapper.appendChild(inner);
+    cont.appendChild(wrapper);
+  });
+}
+
+function openCreateCustomModal(){
+  showModal(`<h3>Create custom tab</h3><label>Tab name</label><input id="ct_name"/><label>Columns (comma separated)</label><input id="ct_cols" placeholder="e.g. student_name,leftover,notes" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="ct_save">Create</button></div>`);
+  $('ct_save').onclick = async ()=>{
+    const name = $('ct_name').value.trim(); const cols = $('ct_cols').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!name || !cols.length) return alert('Provide name and columns');
+    try {
+      const payload = { name, columns: cols, created_at: new Date().toISOString() };
+      const { error } = await supa.from('custom_tabs').insert([payload]);
+      if (error) throw error;
+      alert('Custom tab created (JSONB-backed). To create a real SQL table per-tab, ask me and I will add a migration tool.');
+      closeModal(); await loadCustomTabs();
+    } catch(e){ alert('Error: '+(e.message||e)); }
+  };
+}
+
+function openAddCustomRow(tabJson){
+  // tabJson may come as stringified object due to how onclick passes it
+  let tab = tabJson;
+  if (typeof tabJson === 'string') tab = JSON.parse(tabJson);
+  const cols = tab.columns || [];
+  let html = `<h3>Add row — ${esc(tab.name)}</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
+  cols.forEach(c => html += `<div><label class="small-muted">${esc(c)}</label><input id="crt_${esc(c)}" /></div>`);
+  html += `</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="crt_save">Save</button></div>`;
+  showModal(html);
+  $('crt_save').onclick = async ()=>{
+    const row = {}; cols.forEach(c=> row[c] = document.getElementById('crt_' + c).value );
+    const payload = { custom_tab_id: tab.id, student_id: row.student_id || null, data: row, row_data: row, created_at: new Date().toISOString() };
+    try {
+      const tableName = app.use_custom_tab_rows ? 'custom_tab_rows' : 'custom_tab_data';
+      const { error } = await supa.from(tableName).insert([payload]);
+      if (error) throw error;
+      alert('Row added to custom tab');
+      closeModal(); await loadCustomTabs();
+    } catch(e){ alert('Error: '+(e.message||e)); }
+  };
+}
+
+async function viewCustomRows(tabId){
+  await refreshAll();
+  const rows = (app.cache.custom_tab_rows||[]).filter(r => r.custom_tab_id === tabId);
+  showModal(`<h3>Rows</h3><pre class="json">${esc(JSON.stringify(rows,null,2))}</pre><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+
+/* =========================
+   Finance
+   ========================= */
+document.getElementById('btnAddExpense').addEventListener('click', ()=> openAddExpense());
+document.getElementById('btnAddBank').addEventListener('click', ()=> openAddBank());
+
+async function loadFinance(){
+  await refreshAll();
+  const et = document.querySelector('#tbl_expenses tbody'); et.innerHTML = '';
+  const bt = document.querySelector('#tbl_bank tbody'); bt.innerHTML = '';
+  (app.cache.expenses||[]).forEach(e=> {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e.id}</td><td>${esc(e.category)}</td><td>${esc(e.amount)}</td><td>${esc(e.date||'')}</td><td>${esc(e.note||'')}</td><td><button class="btn ghost" onclick="viewExpense(${e.id})">View</button></td>`;
+    et.appendChild(tr);
+  });
+  (app.cache.bank_receipts||[]).forEach(b=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${b.id}</td><td>${esc(b.payer_name)}</td><td>${esc(b.amount)}</td><td>${esc(b.payment_date||'')}</td><td><button class="btn ghost" onclick="viewBank(${b.id})">View</button></td>`;
+    bt.appendChild(tr);
+  });
+}
+function viewExpense(id){ const r = (app.cache.expenses||[]).find(x=>x.id===id); alert(JSON.stringify(r,null,2)); }
+function viewBank(id){ const r = (app.cache.bank_receipts||[]).find(x=>x.id===id); alert(JSON.stringify(r,null,2)); }
+
+function openAddExpense(){
+  showModal(`<h3>Add expense</h3><label>Category</label><input id="ex_cat"/><label>Amount</label><input id="ex_amt" type="number"/><label>Date</label><input id="ex_date" type="date"/><label>Note</label><input id="ex_note"/><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="ex_save">Save</button></div>`);
+  $('ex_save').onclick = async ()=> {
+    const payload = { name: $('ex_cat').value.trim(), amount: Number($('ex_amt').value||0), date: $('ex_date').value || new Date().toISOString(), description: $('ex_note').value || null };
+    const { error } = await supa.from('expenses').insert([payload]);
+    if (error) alert('Error: '+error.message); else { closeModal(); await loadFinance(); }
+  };
+}
+function openAddBank(){
+  showModal(`<h3>Add bank receipt</h3><label>Payer</label><input id="bk_payer"/><label>Amount</label><input id="bk_amt" type="number"/><label>Date</label><input id="bk_date" type="date"/><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" id="bk_save">Save</button></div>`);
+  $('bk_save').onclick = async ()=> {
+    const payload = { payer_name: $('bk_payer').value.trim(), amount: Number($('bk_amt').value||0), payment_date: $('bk_date').value || new Date().toISOString() };
+    const { error } = await supa.from('bank_receipts').insert([payload]);
+    if (error) alert('Error: '+error.message); else { closeModal(); await loadFinance(); }
+  };
+}
+
+/* =========================
+   Promotion tool
+   ========================= */
+document.getElementById('btnPromote').addEventListener('click', async ()=>{
+  if (!confirm('Promote all students who have promote_next=true?')) return;
+  try {
+    await refreshAll();
+    const classes = app.cache.classes.slice().sort((a,b)=> (a.display_order||0)-(b.display_order||0));
+    const nextMap = {}; for (let i=0;i<classes.length;i++){ nextMap[classes[i].id] = classes[i+1] ? classes[i+1].id : null; }
+    const toPromote = (await supa.from('students').select('*').or('promote_next.eq.true,promote_next.is.null')) .data || [];
+    let promoted = 0;
+    for (const s of toPromote){
+      const nid = nextMap[s.class_id];
+      if (!nid) continue;
+      const { error } = await supa.from('students').update({ class_id: nid }).eq('id', s.id);
+      if (!error) promoted++;
+    }
+    alert(`Promotion complete. ${promoted} students promoted.`);
+    await refreshAll(); loadStudents();
+  } catch (e) { alert('Error: ' + (e.message || e)); }
+});
+
+/* =========================
+   Raw viewer
+   ========================= */
+async function loadRawSelector(){
+  const tables = await getExistingTables();
+  const sel = $('rawTableSelect'); sel.innerHTML = '';
+  tables.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
+}
+document.getElementById('btnLoadRaw').addEventListener('click', async ()=>{
+  const table = $('rawTableSelect').value; if (!table) return;
+  const { data, error } = await supa.from(table).select('*').limit(500);
+  const container = $('rawContainer'); container.innerHTML = '';
+  if (error) return container.innerHTML = '<div class="small-muted">Error loading table: ' + esc(error.message) + '</div>';
+  if (!data || !data.length) return container.innerHTML = '<div class="small-muted">No rows</div>';
+  const keys = Array.from(data.reduce((s,r)=>{ Object.keys(r).forEach(k=>s.add(k)); return s; }, new Set()));
+  let html = '<table><thead><tr>' + keys.map(k => `<th>${esc(k)}</th>`).join('') + '</tr></thead><tbody>';
+  for (const r of data){
+    html += '<tr>' + keys.map(k => `<td>${esc((r[k]===null||r[k]===undefined)?'':(typeof r[k]==='object'?JSON.stringify(r[k]):String(r[k])))}</td>`).join('') + '</tr>';
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+});
+
+/* =========================
+   Realtime subscriptions
+   ========================= */
+function startRealtime(){
+  // unsubscribe existing
+  try { app.subscriptions.forEach(ch => ch.unsubscribe && ch.unsubscribe()); } catch(e){}
+  app.subscriptions = [];
+  const tables = ['students','classes','sessions','terms','tuition','tuition_payments','item_payments','bank_receipts','expenses','custom_tabs', app.use_custom_tab_rows ? 'custom_tab_rows' : 'custom_tab_data'];
+  tables.forEach(tbl=>{
+    const ch = supa.channel('realtime:' + tbl).on('postgres_changes', { event: '*', schema: 'public', table: tbl }, payload=>{
+      console.log('realtime', tbl, payload);
+      // refresh minimally: if current view touches the table, reload that view
+      refreshAll(); // simple approach: refresh cached data
+      if (app.currentView === 'students') loadStudents();
+      if (app.currentView === 'joined') loadJoined();
+      if (app.currentView === 'payments') loadPayments();
+      if (app.currentView === 'items') loadItems();
+      if (app.currentView === 'classes') loadClasses();
+      if (app.currentView === 'sessions') loadSessions();
+      if (app.currentView === 'customs') loadCustomTabs();
+      if (app.currentView === 'finance') loadFinance();
+      if (app.currentView === 'raw') loadRawSelector();
+    }).subscribe();
+    app.subscriptions.push(ch);
+  });
+}
+
+/* =========================
+   Controls wiring
+   ========================= */
+$('viewSelect').addEventListener('change', e => setView(e.target.value));
+$('btnRefresh').addEventListener('click', ()=> { refreshAll().then(()=> setView(app.currentView)); });
+$('btnExport').addEventListener('click', async ()=>{
+  // export currently visible view
+  switch(app.currentView){
+    case 'students': csvDownload('students.csv', app.cache.students || []); break;
+    case 'payments': csvDownload('payments.csv', app.cache.tuition_payments || []); break;
+    case 'items': csvDownload('item_payments.csv', app.cache.item_payments || []); break;
+    case 'classes': csvDownload('classes.csv', app.cache.classes || []); break;
+    case 'finance': csvDownload('expenses.csv', app.cache.expenses || []); break;
+    default: alert('Export for this view not configured'); break;
+  }
+});
+$('btnSearch').addEventListener('click', ()=> {
+  const q = $('globalSearch').value.trim().toLowerCase();
+  if (!q) return alert('type search query');
+  // perform client-side search across students, classes, payments and show small result modal
+  const res = [];
+  (app.cache.students||[]).forEach(s => { if (JSON.stringify(s).toLowerCase().includes(q)) res.push({table:'students',row:s}); });
+  (app.cache.tuition_payments||[]).forEach(p => { if (JSON.stringify(p).toLowerCase().includes(q)) res.push({table:'tuition_payments',row:p}); });
+  (app.cache.item_payments||[]).forEach(i => { if (JSON.stringify(i).toLowerCase().includes(q)) res.push({table:'item_payments',row:i}); });
+  showModal(`<h3>Search results (${res.length})</h3><pre class="json">${esc(JSON.stringify(res.slice(0,100),null,2))}</pre><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+});
+
+/* initial ready */
+(async ()=>{
+  await detectSchemaAndLoad();
+  setView('students');
+  // wire quick loads
+  window.loadStudents = loadStudents;
+  window.loadPayments = loadPayments;
+  window.loadItems = loadItems;
+  window.loadClasses = loadClasses;
+  window.loadSessions = loadSessions;
+  window.loadCustomTabs = loadCustomTabs;
+  window.loadFinance = loadFinance;
+  window.openEditStudent = openEditStudent;
+  window.deleteStudent = deleteStudent;
+  window.updatePaymentAmount = updatePaymentAmount;
+  window.openAddCustomRow = openAddCustomRow; // used by generated onclick
+})();
+</script>
+</body>
+</html>

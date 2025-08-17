@@ -1,0 +1,109 @@
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #f7faff 0%, #ece38a 40%, #a8c6e9 100%);
+  min-height: 100vh;
+  margin: 0;
+}
+.header {
+  background: linear-gradient(90deg, #ddd8ab 40%, #d6dfe9 100%);
+  color: #fdfdd3;
+  padding: 2rem 0 1rem 0;
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  background: #f7faff;
+  color: #0057b8;
+  font-weight: bold;
+  padding: 1rem 0;
+  font-size: 1.1rem;
+  border-bottom: 2px solid #ffe600;
+}
+.nav button {
+  background: #0057b8;
+  color: #ffe600;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s, color 0.2s;
+}
+.nav button.active, .nav button:hover {
+  background: #ffe600;
+  color: #0057b8;
+  border: 2px solid #0057b8;
+}
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 2rem;
+}
+.section-title {
+  color: #0057b8;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #ffe600;
+  padding-bottom: 0.5rem;
+}
+.btn {
+  background: linear-gradient(90deg, #ddd8ab 40%, #d6dfe9 100%);
+  color: #0057b8;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0.5rem 0;
+  transition: background 0.2s, color 0.2s;
+}
+.btn:hover {
+  background: #0057b8;
+  color: #ffe600;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+.table th, .table td {
+  border: 1px solid #0057b8;
+  padding: 0.75rem;
+  text-align: left;
+}
+.table th {
+  background: linear-gradient(90deg, #ddd8ab 40%, #d6dfe9 100%);
+  color: #0057b8;
+}
+.table tr:nth-child(even) {
+  background: #f6f6f6;
+}
+.card {
+  background: linear-gradient(90deg, #ddd8ab 20%, #d6dfe9 100%);
+  color: #0057b8;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+input, select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #0057b8;
+  margin-bottom: 1rem;
+  width: 100%;
+  font-size: 1rem;
+}
+label {
+  font-weight: bold;
+  color: #0057b8;
+}
