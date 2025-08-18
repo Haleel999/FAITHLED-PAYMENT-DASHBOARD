@@ -83,6 +83,7 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
     }
     setDeletingTab(false);
   };
+      {/* Delete Tab Dialog always rendered at root */}
       <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
         <DialogTitle>Confirm Delete Tab</DialogTitle>
         <DialogContent>
