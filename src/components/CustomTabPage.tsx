@@ -83,7 +83,9 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
     }
     setDeletingTab(false);
   };
-      {/* Delete Tab Dialog always rendered at root */}
+  return (
+    <Paper sx={{ padding: '1rem', margin: '1rem' }}>
+      {/* ...existing code... */}
       <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
         <DialogTitle>Confirm Delete Tab</DialogTitle>
         <DialogContent>
@@ -99,6 +101,8 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+    </Paper>
+  );
 
   const handleSaveTabName = () => {
     if (newTabName.trim() && newTabName !== tabName) {
