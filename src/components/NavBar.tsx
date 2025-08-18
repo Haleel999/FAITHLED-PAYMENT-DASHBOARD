@@ -44,7 +44,7 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
   );
 
   return (
-  <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: darkMode ? 'var(--card)' : '#fafafa'}}>
+  <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: darkMode ? '#1e1e1e' : '#fafafa'}}>
       <Box className="container" sx={{ 
         display: 'flex', 
         alignItems: 'center', 
