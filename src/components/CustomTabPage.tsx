@@ -51,6 +51,9 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
   const [editingColumn, setEditingColumn] = useState<{ index: number; name: string } | null>(null);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnName: string } | null>(null);
   const [cellEditValue, setCellEditValue] = useState('');
+  const [deleteTabDialogOpen, setDeleteTabDialogOpen] = useState(false);
+  const [deletingTab, setDeletingTab] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const toggleStudent = (id: number) => {
     setSelectedStudentIds(prev => 
@@ -65,59 +68,21 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
     setOpenAdd(false);
   };
 
-  const [deleteTabDialogOpen, setDeleteTabDialogOpen] = useState(false);
-  const [deletingTab, setDeletingTab] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const handleDeleteTab = () => {
     setDeleteTabDialogOpen(true);
   };
+  
   const handleConfirmDeleteTab = async () => {
     setDeletingTab(true);
     setDeleteError(null);
     try {
-      console.log('Deleting tab:', tabName);
-      await Promise.resolve(onDeleteTab(tabName));
+      await onDeleteTab(tabName);
       setDeleteTabDialogOpen(false);
     } catch (e: any) {
       setDeleteError(e?.message || 'Failed to delete tab');
     }
     setDeletingTab(false);
   };
-  return (
-    <Paper sx={{ padding: '1rem', margin: '1rem' }}>
-      {/* ...existing code... */}
-      <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
-        <DialogTitle>Confirm Delete Tab</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete the "{tabName}" tab?
-          {deleteError && (
-            <Typography color="error" sx={{ mt: 2 }}>{deleteError}</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTabDialogOpen(false)} disabled={deletingTab}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleConfirmDeleteTab} disabled={deletingTab}>
-            {deletingTab ? 'Deleting...' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
-    <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
-      <DialogTitle>Confirm Delete Tab</DialogTitle>
-      <DialogContent>
-        Are you sure you want to delete the "{tabName}" tab?
-        {deleteError && (
-          <Typography color="error" sx={{ mt: 2 }}>{deleteError}</Typography>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setDeleteTabDialogOpen(false)} disabled={deletingTab}>Cancel</Button>
-        <Button color="error" variant="contained" onClick={handleConfirmDeleteTab} disabled={deletingTab}>
-          {deletingTab ? 'Deleting...' : 'Delete'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
 
   const handleSaveTabName = () => {
     if (newTabName.trim() && newTabName !== tabName) {
@@ -193,7 +158,7 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
   };
 
   return (
-  <Paper sx={{ padding: '1rem', margin: '1rem' }}>
+    <Paper sx={{ padding: '1rem', margin: '1rem' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         {editingTabName ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -485,6 +450,22 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
         </TableBody>
         </Table>
       </div>
+      
+      <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
+        <DialogTitle>Confirm Delete Tab</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete the "{tabName}" tab?
+          {deleteError && (
+            <Typography color="error" sx={{ mt: 2 }}>{deleteError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTabDialogOpen(false)} disabled={deletingTab}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={handleConfirmDeleteTab} disabled={deletingTab}>
+            {deletingTab ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
