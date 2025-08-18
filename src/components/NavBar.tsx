@@ -44,7 +44,7 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
   );
 
   return (
-  <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: '#fafafa'}}>
+  <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: darkMode ? 'var(--card)' : '#fafafa'}}>
       <Box className="container" sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -126,10 +126,15 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
         onClose={() => setMobileOpen(false)}
         sx={{ 
           '& .MuiDrawer-paper': { 
-            background: 'var(--card)', 
+            background: darkMode ? 'var(--card)' : '#fff', 
             width: 250,
             px: 2,
-            py: 3
+            py: 3,
+            boxShadow: 3,
+            opacity: 1,
+            backdropFilter: 'none',
+            backgroundImage: 'none',
+            border: 'none'
           } 
         }}
       >

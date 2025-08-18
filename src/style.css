@@ -1,3 +1,10 @@
+/* Force Drawer background to be opaque */
+.MuiDrawer-paper {
+  background-color: #fff !important;
+}
+[data-theme="dark"] .MuiDrawer-paper {
+  background-color: #1e1e1e !important;
+}
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
