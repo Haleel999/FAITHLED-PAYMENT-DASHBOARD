@@ -102,6 +102,21 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
         </DialogActions>
       </Dialog>
     </Paper>
+    <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
+      <DialogTitle>Confirm Delete Tab</DialogTitle>
+      <DialogContent>
+        Are you sure you want to delete the "{tabName}" tab?
+        {deleteError && (
+          <Typography color="error" sx={{ mt: 2 }}>{deleteError}</Typography>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setDeleteTabDialogOpen(false)} disabled={deletingTab}>Cancel</Button>
+        <Button color="error" variant="contained" onClick={handleConfirmDeleteTab} disabled={deletingTab}>
+          {deletingTab ? 'Deleting...' : 'Delete'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 
   const handleSaveTabName = () => {
