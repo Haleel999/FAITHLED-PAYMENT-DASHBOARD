@@ -67,18 +67,30 @@ const CustomTabPage: React.FC<CustomTabPageProps> = ({
 
   const [deleteTabDialogOpen, setDeleteTabDialogOpen] = useState(false);
   const [deletingTab, setDeletingTab] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const handleDeleteTab = () => {
     setDeleteTabDialogOpen(true);
   };
   const handleConfirmDeleteTab = async () => {
     setDeletingTab(true);
-    await Promise.resolve(onDeleteTab(tabName));
+    setDeleteError(null);
+    try {
+      console.log('Deleting tab:', tabName);
+      await Promise.resolve(onDeleteTab(tabName));
+      setDeleteTabDialogOpen(false);
+    } catch (e: any) {
+      setDeleteError(e?.message || 'Failed to delete tab');
+    }
     setDeletingTab(false);
-    setDeleteTabDialogOpen(false);
   };
       <Dialog open={deleteTabDialogOpen} onClose={() => setDeleteTabDialogOpen(false)}>
         <DialogTitle>Confirm Delete Tab</DialogTitle>
-        <DialogContent>Are you sure you want to delete the "{tabName}" tab?</DialogContent>
+        <DialogContent>
+          Are you sure you want to delete the "{tabName}" tab?
+          {deleteError && (
+            <Typography color="error" sx={{ mt: 2 }}>{deleteError}</Typography>
+          )}
+        </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTabDialogOpen(false)} disabled={deletingTab}>Cancel</Button>
           <Button color="error" variant="contained" onClick={handleConfirmDeleteTab} disabled={deletingTab}>
