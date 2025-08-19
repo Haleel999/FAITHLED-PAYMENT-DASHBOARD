@@ -5,7 +5,6 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeToggle from './DarkModeToggle';
-import LogoutIcon from '@mui/icons-material/Logout';
 
 interface Props {
   navs: string[];
@@ -14,10 +13,16 @@ interface Props {
   onAddTab?: () => void;
   toggleTheme: () => void;
   darkMode: boolean;
-  onLogout: () => void;
 }
 
-const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggleTheme, darkMode, onLogout }) => {
+const NavBar: React.FC<Props> = ({ 
+  navs, 
+  currentNav, 
+  onNavigate, 
+  onAddTab, 
+  toggleTheme, 
+  darkMode
+}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   
   // Responsive breakpoints
@@ -45,7 +50,7 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
   );
 
   return (
-  <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: darkMode ? '#1e1e1e' : '#fafafa'}}>
+    <Box className="headerbar" sx={{ borderBottom: '1px solid var(--border)', background: darkMode ? '#1e1e1e' : '#fafafa'}}>
       <Box className="container" sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -93,7 +98,6 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
           display: 'flex', 
           alignItems: 'center', 
           gap: 1,
-          ml: 'auto'
         }}>
           <DarkModeToggle toggleTheme={toggleTheme} darkMode={darkMode} />
 
@@ -107,12 +111,6 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
               + Add Tab
             </Button>
           )}
-          
-          <Tooltip title="Logout">
-            <IconButton onClick={onLogout} color="inherit">
-              <LogoutIcon />
-            </IconButton>
-          </Tooltip>
           
           {(isTablet || isMobile) && (
             <IconButton 
@@ -159,14 +157,6 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
               + Add Custom Tab
             </Button>
           )}
-          <Button 
-            variant="outlined" 
-            onClick={onLogout}
-            sx={{ mt: 2 }}
-            startIcon={<LogoutIcon />}
-          >
-            Logout
-          </Button>
         </Box>
       </Drawer>
     </Box>

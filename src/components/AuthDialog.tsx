@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, TextField, Typography, Box, Alert
+  Button, TextField, Typography, Box, Alert, CircularProgress
 } from '@mui/material';
 import { supabase } from '../utils/supabaseClient';
 
@@ -11,22 +11,24 @@ interface AuthDialogProps {
 }
 
 export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
-  const [mode, setMode] = useState<'login' | 'reset'>('login');
-  const [email, setEmail] = useState('jamiuhaleel@gmail.com');
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [name, setName] = useState('');
 
   useEffect(() => {
     if (!open) {
-      // Reset state when closing dialog
       setMode('login');
       setError('');
       setSuccessMsg('');
       setPassword('');
       setAdminKey('');
+      setName('');
+      setEmail('');
     }
   }, [open]);
 
@@ -35,32 +37,13 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
     setError('');
     
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (authError) {
-        console.error('Authentication error:', authError);
-        
-        // Handle specific error cases
-        if (authError.status === 400) {
-          throw new Error('Invalid email or password');
-        } else if (authError.message.includes('database')) {
-          throw new Error('Server configuration issue');
-        } else {
-          throw new Error(authError.message || 'Login failed');
-        }
-      }
-      
-      // Check for valid timestamps
-      if (data?.user && (!data.user.created_at || !data.user.updated_at)) {
-        console.warn('User timestamps are missing, setting fallback values');
-        // Update session with fallback values
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
-        });
+        throw new Error(authError.message || 'Login failed');
       }
       
       onAuthSuccess();
@@ -71,8 +54,8 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!adminKey || adminKey !== 'Haleel999') {
+  const handleSignup = async () => {
+    if (!adminKey || adminKey !== 'Faithled admin 999') {
       setError('Invalid admin key');
       return;
     }
@@ -81,12 +64,43 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
     setError('');
     
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin
+      const { error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'admin'
+          }
+        }
       });
       
+      if (signupError) {
+        throw new Error(signupError.message || 'Signup failed');
+      }
+      
+      setSuccessMsg('Account created! Please check your email to confirm your account.');
+      setMode('login');
+    } catch (e: any) {
+      setError(e.message || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!adminKey || adminKey !== 'Faithled admin 999') {
+      setError('Invalid admin key');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      
       if (resetError) {
-        console.error('Password reset error:', resetError);
         throw resetError;
       }
       
@@ -101,7 +115,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
 
   return (
     <Dialog open={open} fullWidth maxWidth="sm">
-      <DialogTitle>Admin Login</DialogTitle>
+      <DialogTitle>Admin Authentication</DialogTitle>
       
       <DialogContent>
         {mode === 'login' && (
@@ -113,6 +127,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               sx={{ mb: 2 }}
+              autoComplete="off"
             />
             <TextField
               label="Password"
@@ -121,6 +136,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 2 }}
+              autoComplete="off"
             />
             
             {error && (
@@ -135,16 +151,85 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               onClick={handleLogin}
               disabled={loading}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? <CircularProgress size={24} /> : 'Login'}
+            </Button>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+              <Button onClick={() => setMode('reset')} disabled={loading}>
+                Forgot Password?
+              </Button>
+              <Button onClick={() => setMode('signup')} disabled={loading}>
+                Sign Up as Admin
+              </Button>
+            </Box>
+          </Box>
+        )}
+        
+        {mode === 'signup' && (
+          <Box sx={{ p: 2 }}>
+            <Typography sx={{ mb: 2 }}>
+              Sign up as a new administrator
+            </Typography>
+            
+            <TextField
+              label="Full Name"
+              fullWidth
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              sx={{ mb: 2 }}
+              autoComplete="off"
+            />
+            
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              sx={{ mb: 2 }}
+              autoComplete="off"
+            />
+            
+            <TextField
+              label="Password"
+              type="password"
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              sx={{ mb: 2 }}
+              autoComplete="off"
+            />
+            
+            <TextField
+              label="Admin Key"
+              type="password"
+              fullWidth
+              value={adminKey}
+              onChange={(e) => setAdminKey(e.target.value)}
+              sx={{ mb: 2 }}
+              helperText="Required to create admin accounts"
+              autoComplete="off"
+            />
+            
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
+            
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleSignup}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Sign Up'}
             </Button>
             
             <Button
               fullWidth
               sx={{ mt: 1 }}
-              onClick={() => setMode('reset')}
+              onClick={() => setMode('login')}
               disabled={loading}
             >
-              Forgot Password?
+              Back to Login
             </Button>
           </Box>
         )}
@@ -162,6 +247,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               sx={{ mb: 2 }}
+              autoComplete="off"
             />
             
             <TextField
@@ -171,6 +257,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
               sx={{ mb: 2 }}
+              autoComplete="off"
             />
             
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -182,7 +269,7 @@ export default function AuthDialog({ open, onAuthSuccess }: AuthDialogProps) {
               onClick={handleResetPassword}
               disabled={loading}
             >
-              {loading ? 'Sending...' : 'Reset Password'}
+              {loading ? <CircularProgress size={24} /> : 'Reset Password'}
             </Button>
             
             <Button

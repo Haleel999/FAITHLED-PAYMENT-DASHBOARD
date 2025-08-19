@@ -11,12 +11,12 @@ DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP VIEW IF EXISTS debtor_view CASCADE;
 
--- Create profiles table for Supabase auth
+-- Create profiles table
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    phone TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on profiles
@@ -26,7 +26,7 @@ ON public.profiles
 FOR ALL 
 USING (auth.uid() = id);
 
--- Create students table with user_id reference
+-- Create students table
 CREATE TABLE students (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -40,7 +40,7 @@ CREATE TABLE students (
     parent_name VARCHAR(100),
     parent_phone VARCHAR(20),
     parent_email VARCHAR(100),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on students
@@ -57,7 +57,7 @@ CREATE TABLE tuition (
         'PRY 1', 'PRY 2', 'PRY 3', 'PRY 4', 'PRY 5'
     )),
     amount INTEGER NOT NULL CHECK (amount >= 0),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Create payments table
@@ -75,7 +75,7 @@ CREATE TABLE payments (
     payment_date DATE,
     status VARCHAR(20) NOT NULL DEFAULT 'unpaid' CHECK (status IN ('paid', 'partial', 'unpaid', 'scholarship')),
     is_scholarship BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on payments
@@ -94,7 +94,7 @@ CREATE TABLE sessions (
     open_date DATE NULL,
     close_date DATE NULL,
     holiday_weeks INTEGER NOT NULL CHECK (holiday_weeks >= 0),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on sessions
@@ -111,7 +111,7 @@ CREATE TABLE expenses (
     term VARCHAR(20) NOT NULL CHECK (term IN ('first', 'second', 'third')),
     category VARCHAR(100) NOT NULL,
     amount INTEGER NOT NULL CHECK (amount >= 0),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on expenses
@@ -136,7 +136,7 @@ CREATE TABLE books (
     deposit INTEGER NOT NULL DEFAULT 0 CHECK (deposit >= 0),
     date DATE,
     note TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Enable RLS on books
@@ -160,7 +160,7 @@ CREATE TABLE party (
     amount INTEGER NOT NULL CHECK (amount >= 0),
     deposit INTEGER NOT NULL DEFAULT 0 CHECK (deposit >= 0),
     payment_date DATE,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
     UNIQUE (student_id, event_type)
 );
 
@@ -195,7 +195,7 @@ CREATE TABLE custom_tabs (
     preset VARCHAR(50),
     columns JSONB NOT NULL DEFAULT '[]'::jsonb,
     rows JSONB NOT NULL DEFAULT '[]'::jsonb,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
     UNIQUE (user_id, name)
 );
 
@@ -257,8 +257,8 @@ FOR EACH ROW EXECUTE FUNCTION update_payment_status();
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id)
-    VALUES (NEW.id);
+    INSERT INTO public.profiles (id, name)
+    VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'name', ''));
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -270,10 +270,9 @@ AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE PROCEDURE public.handle_new_user();
 
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- Create admin user
--- First, check if the admin user already exists
+
+-- Create admin user with valid timestamps
 WITH existing_admin AS (
     SELECT id FROM auth.users WHERE email = 'admin@faithled.com'
 )
@@ -295,28 +294,48 @@ INSERT INTO auth.users (
     last_sign_in_at, 
     raw_app_meta_data, 
     raw_user_meta_data, 
-    is_super_admin
+    is_super_admin,
+    created_at,
+    updated_at
 )
 SELECT 
-    '00000000-0000-0000-0000-000000000000',  -- instance_id
-    COALESCE((SELECT id FROM existing_admin), uuid_generate_v4()),  -- use existing ID or generate new
-    'authenticated',     -- aud
-    'authenticated',     -- role
+    '00000000-0000-0000-0000-000000000000',
+    COALESCE((SELECT id FROM existing_admin), uuid_generate_v4()),
+    'authenticated',
+    'authenticated',
     'admin@faithled.com',
-    crypt('Haleel999', gen_salt('bf')),
-    NOW(),              -- email_confirmed_at
-    NULL,               -- invited_at
-    '',                 -- confirmation_token
-    NULL,               -- confirmation_sent_at
-    '',                 -- recovery_token
-    NULL,               -- recovery_sent_at
-    '',                 -- email_change_token_new
-    '',                 -- email_change
-    NULL,               -- last_sign_in_at
-    '{}',               -- raw_app_meta_data
-    '{}',               -- raw_user_meta_data
-    false               -- is_super_admin
+    crypt('Faithled admin 999', gen_salt('bf')),  -- Updated key
+    NOW(),
+    NULL,
+    '',
+    NULL,
+    '',
+    NULL,
+    '',
+    '',
+    NULL,
+    '{}',
+    '{}',
+    false,
+    NOW(),
+    NOW()
 WHERE NOT EXISTS (SELECT 1 FROM existing_admin);
+
+-- Fix NULL timestamps in auth.users
+UPDATE auth.users SET 
+    created_at = COALESCE(created_at, NOW()),
+    updated_at = COALESCE(updated_at, NOW())
+WHERE created_at IS NULL OR updated_at IS NULL;
+
+-- Add NOT NULL constraints to auth.users
+DO $$ 
+BEGIN
+    ALTER TABLE auth.users ALTER COLUMN created_at SET NOT NULL;
+    ALTER TABLE auth.users ALTER COLUMN updated_at SET NOT NULL;
+EXCEPTION
+    WHEN others THEN -- Ignore errors if columns already have constraints
+END $$;
+
 -- Initial tuition data
 INSERT INTO tuition (class, amount) VALUES
 ('CRECHE', 14000),
