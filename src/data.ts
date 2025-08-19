@@ -34,8 +34,13 @@ export async function fetchStudents(): Promise<Student[]> {
 }
 
 export async function upsertStudent(payload: Partial<Student>) {
+  // Ensure age is either a number or null
+  let ageValue = payload.age;
+  if (ageValue === '' || ageValue === undefined) ageValue = null;
+  else ageValue = Number(ageValue);
   const { data, error } = await supabase.from('students').upsert({ 
     ...payload, 
+    age: ageValue,
     created_at: safeTimestamp(payload.created_at)
   }).select('*').single();
   
