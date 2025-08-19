@@ -1,7 +1,6 @@
--- Drop existing tables in correct dependency order
-DROP TABLE IF EXISTS custom_tab_rows CASCADE;
-DROP TABLE IF EXISTS custom_tab_columns CASCADE;
+-- Drop existing tables
 DROP TABLE IF EXISTS custom_tabs CASCADE;
+DROP TABLE IF EXISTS party_class_amounts CASCADE;
 DROP TABLE IF EXISTS party CASCADE;
 DROP TABLE IF EXISTS books CASCADE;
 DROP TABLE IF EXISTS expenses CASCADE;
@@ -9,11 +8,28 @@ DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS tuition CASCADE;
 DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP VIEW IF EXISTS debtor_view CASCADE;
 
--- Create students table without scholarship column
+-- Create profiles table for Supabase auth
+CREATE TABLE public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    phone TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own profile" 
+ON public.profiles 
+FOR ALL 
+USING (auth.uid() = id);
+
+-- Create students table with user_id reference
 CREATE TABLE students (
     id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     age INTEGER,
@@ -27,7 +43,14 @@ CREATE TABLE students (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create tuition table with class name
+-- Enable RLS on students
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their students" 
+ON students 
+FOR ALL 
+USING (auth.uid() = user_id);
+
+-- Create tuition table
 CREATE TABLE tuition (
     class VARCHAR(20) PRIMARY KEY CHECK (class IN (
         'CRECHE', 'KG 1', 'KG 2', 'NURS 1', 'NURS 2', 
@@ -37,10 +60,11 @@ CREATE TABLE tuition (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create payments table with scholarship column
+-- Create payments table
 CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    student_id INTEGER NOT NULL UNIQUE REFERENCES students(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
     student_name VARCHAR(101) NOT NULL,
     class VARCHAR(20) NOT NULL CHECK (class IN (
         'CRECHE', 'KG 1', 'KG 2', 'NURS 1', 'NURS 2', 
@@ -54,29 +78,53 @@ CREATE TABLE payments (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Enable RLS on payments
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their payments" 
+ON payments 
+FOR ALL 
+USING (auth.uid() = user_id);
+
 -- Create sessions table
 CREATE TABLE sessions (
     id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     term VARCHAR(20) NOT NULL CHECK (term IN ('Session', 'First Term', 'Second Term', 'Third Term')),
     year VARCHAR(9) NOT NULL,
-    open_date DATE NULL,  -- Allow NULL
-    close_date DATE NULL, -- Allow NULL
+    open_date DATE NULL,
+    close_date DATE NULL,
     holiday_weeks INTEGER NOT NULL CHECK (holiday_weeks >= 0),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Enable RLS on sessions
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their sessions" 
+ON sessions 
+FOR ALL 
+USING (auth.uid() = user_id);
+
 -- Create expenses table
 CREATE TABLE expenses (
     id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     term VARCHAR(20) NOT NULL CHECK (term IN ('first', 'second', 'third')),
     category VARCHAR(100) NOT NULL,
     amount INTEGER NOT NULL CHECK (amount >= 0),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create books table (textbooks/notebooks)
+-- Enable RLS on expenses
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their expenses" 
+ON expenses 
+FOR ALL 
+USING (auth.uid() = user_id);
+
+-- Create books table
 CREATE TABLE books (
     id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     student_name VARCHAR(101) NOT NULL,
     class VARCHAR(20) NOT NULL CHECK (class IN (
@@ -91,9 +139,17 @@ CREATE TABLE books (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Enable RLS on books
+ALTER TABLE books ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their books" 
+ON books 
+FOR ALL 
+USING (auth.uid() = user_id);
+
 -- Create party table
 CREATE TABLE party (
     id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     student_name VARCHAR(101) NOT NULL,
     class VARCHAR(20) NOT NULL CHECK (class IN (
@@ -108,23 +164,47 @@ CREATE TABLE party (
     UNIQUE (student_id, event_type)
 );
 
+-- Enable RLS on party
+ALTER TABLE party ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their party data" 
+ON party 
+FOR ALL 
+USING (auth.uid() = user_id);
+
 -- Create party class amounts table
 CREATE TABLE party_class_amounts (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     class VARCHAR(20) NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     amount INTEGER NOT NULL CHECK (amount >= 0),
-    PRIMARY KEY (class, event_type)
+    PRIMARY KEY (user_id, class, event_type)
 );
 
--- Create custom tabs with JSON storage
+-- Enable RLS on party_class_amounts
+ALTER TABLE party_class_amounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their party class amounts" 
+ON party_class_amounts 
+FOR ALL 
+USING (auth.uid() = user_id);
+
+-- Create custom tabs table
 CREATE TABLE custom_tabs (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
     preset VARCHAR(50),
     columns JSONB NOT NULL DEFAULT '[]'::jsonb,
     rows JSONB NOT NULL DEFAULT '[]'::jsonb,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (user_id, name)
 );
+
+-- Enable RLS on custom_tabs
+ALTER TABLE custom_tabs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their custom tabs" 
+ON custom_tabs 
+FOR ALL 
+USING (auth.uid() = user_id);
 
 -- Create debtors view
 CREATE VIEW debtor_view AS
@@ -138,8 +218,6 @@ JOIN students s ON p.student_id = s.id
 WHERE p.status IN ('partial', 'unpaid');
 
 -- Functions and Triggers
-
--- Cascade student deletion
 CREATE OR REPLACE FUNCTION cascade_student_deletion()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -155,7 +233,6 @@ BEFORE DELETE ON students
 FOR EACH ROW
 EXECUTE FUNCTION cascade_student_deletion();
 
--- Add trigger for payment status update
 CREATE OR REPLACE FUNCTION update_payment_status()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -176,31 +253,92 @@ CREATE TRIGGER trigger_update_payment_status
 BEFORE INSERT OR UPDATE OF amount_paid, is_scholarship ON payments
 FOR EACH ROW EXECUTE FUNCTION update_payment_status();
 
--- Add index for party event_type
-CREATE INDEX idx_party_event_type ON party(event_type);
+-- Function to handle new user registration
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id)
+    VALUES (NEW.id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Add index for expenses term
-CREATE INDEX idx_expenses_term ON expenses(term);
+-- Trigger for new user registration
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE PROCEDURE public.handle_new_user();
 
--- Initial Data Population
 
--- Insert initial tuition amounts
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Create admin user
+-- First, check if the admin user already exists
+WITH existing_admin AS (
+    SELECT id FROM auth.users WHERE email = 'admin@faithled.com'
+)
+INSERT INTO auth.users (
+    instance_id, 
+    id, 
+    aud, 
+    role, 
+    email, 
+    encrypted_password, 
+    email_confirmed_at, 
+    invited_at, 
+    confirmation_token, 
+    confirmation_sent_at, 
+    recovery_token, 
+    recovery_sent_at, 
+    email_change_token_new, 
+    email_change, 
+    last_sign_in_at, 
+    raw_app_meta_data, 
+    raw_user_meta_data, 
+    is_super_admin
+)
+SELECT 
+    '00000000-0000-0000-0000-000000000000',  -- instance_id
+    COALESCE((SELECT id FROM existing_admin), uuid_generate_v4()),  -- use existing ID or generate new
+    'authenticated',     -- aud
+    'authenticated',     -- role
+    'admin@faithled.com',
+    crypt('Haleel999', gen_salt('bf')),
+    NOW(),              -- email_confirmed_at
+    NULL,               -- invited_at
+    '',                 -- confirmation_token
+    NULL,               -- confirmation_sent_at
+    '',                 -- recovery_token
+    NULL,               -- recovery_sent_at
+    '',                 -- email_change_token_new
+    '',                 -- email_change
+    NULL,               -- last_sign_in_at
+    '{}',               -- raw_app_meta_data
+    '{}',               -- raw_user_meta_data
+    false               -- is_super_admin
+WHERE NOT EXISTS (SELECT 1 FROM existing_admin);
+-- Initial tuition data
 INSERT INTO tuition (class, amount) VALUES
-('CRECHE', 140000),
-('KG 1', 210000),
-('KG 2', 210000),
-('NURS 1', 240000),
-('NURS 2', 240000),
-('PRY 1', 270000),
-('PRY 2', 270000),
-('PRY 3', 270000),
-('PRY 4', 270000),
-('PRY 5', 270000);
+('CRECHE', 14000),
+('KG 1', 21000),
+('KG 2', 21000),
+('NURS 1', 24000),
+('NURS 2', 24000),
+('PRY 1', 27000),
+('PRY 2', 27000),
+('PRY 3', 27000),
+('PRY 4', 27000),
+('PRY 5', 27000);
 
--- Create default custom tab
-INSERT INTO custom_tabs (name, preset, columns, rows) VALUES (
+-- Default custom tab
+INSERT INTO custom_tabs (user_id, name, preset, columns, rows) VALUES (
+    '00000000-0000-0000-0000-000000000000',
     'Fees Template',
     'payment',
     '["Student Name", "Amount", "Deposit", "Balance", "DatePaid", "Note"]'::jsonb,
     '[]'::jsonb
 );
+
+-- Indexes
+CREATE INDEX idx_party_event_type ON party(event_type);
+CREATE INDEX idx_expenses_term ON expenses(term);

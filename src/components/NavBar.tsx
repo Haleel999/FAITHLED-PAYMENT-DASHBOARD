@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Box, Button, Stack, IconButton, Drawer, 
@@ -6,6 +5,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DarkModeToggle from './DarkModeToggle';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 interface Props {
   navs: string[];
@@ -14,9 +14,10 @@ interface Props {
   onAddTab?: () => void;
   toggleTheme: () => void;
   darkMode: boolean;
+  onLogout: () => void;
 }
 
-const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggleTheme, darkMode }) => {
+const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggleTheme, darkMode, onLogout }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   
   // Responsive breakpoints
@@ -107,6 +108,12 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
             </Button>
           )}
           
+          <Tooltip title="Logout">
+            <IconButton onClick={onLogout} color="inherit">
+              <LogoutIcon />
+            </IconButton>
+          </Tooltip>
+          
           {(isTablet || isMobile) && (
             <IconButton 
               color="inherit" 
@@ -152,6 +159,14 @@ const NavBar: React.FC<Props> = ({ navs, currentNav, onNavigate, onAddTab, toggl
               + Add Custom Tab
             </Button>
           )}
+          <Button 
+            variant="outlined" 
+            onClick={onLogout}
+            sx={{ mt: 2 }}
+            startIcon={<LogoutIcon />}
+          >
+            Logout
+          </Button>
         </Box>
       </Drawer>
     </Box>

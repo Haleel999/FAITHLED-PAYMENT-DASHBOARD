@@ -1,6 +1,7 @@
-import React from 'react';
-import { ThemeProvider, createTheme, CssBaseline, Snackbar, Alert } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { ThemeProvider, createTheme, CssBaseline, Snackbar, Alert, Box } from '@mui/material';
 import NavBar from './components/NavBar';
+import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
 import Students from './components/Students';
 import Payments from './components/Payments';
@@ -11,6 +12,7 @@ import SchoolParty from './components/Party';
 import CustomTabPage from './components/CustomTabPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import CustomTabDialog from './components/CustomTabDialog';
+import AuthDialog from './components/AuthDialog';
 import { 
   fetchStudents, upsertStudent, deleteStudent, fetchPayments, 
   editPayment, fetchTuition, setTuition, fetchExpensesByTerm, 
@@ -23,9 +25,9 @@ import {
 import { Student, Payment, Tuition, ExpenseRow, CustomTabDef, ClassName, BookRow, SessionTerm } from './types';
 import { CLASS_LIST, DEFAULT_TUITION } from './mockData';
 import { formatNaira } from './utils/format';
-import { format } from 'date-fns';
+import { supabase } from './utils/supabaseClient';
 
-// Define light and dark themes outside the component
+// Define light and dark themes
 const lightTheme = createTheme({
   palette: {
     mode: 'light',
@@ -62,6 +64,34 @@ export default function App() {
     localStorage.setItem('theme', newMode ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', newMode ? 'dark' : 'light');
   };
+
+  // Auth state
+  const [session, setSession] = useState<any>(null);
+  const [authOpen, setAuthOpen] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  // Check session on mount and set up listener
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setSession(session);
+        setAuthOpen(false);
+      }
+      setLoading(false);
+    };
+
+    fetchSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setAuthOpen(!session);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const [nav, setNav] = React.useState('Dashboard');
   const navs = ['Dashboard', 'Students', 'Payments', 'Debtors', 'Books', 'Party', 'Expenses'];
@@ -104,9 +134,11 @@ export default function App() {
   const [studentDates, setStudentDates] = React.useState<Record<number, string>>({});
   const [copySuccess, setCopySuccess] = React.useState(false);
 
-  React.useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => {
+    if (session) {
+      loadData();
+    }
+  }, [session]);
 
   const loadData = async () => {
     try {
@@ -162,8 +194,10 @@ export default function App() {
       }
     };
     
-    loadPartyData();
-  }, [partyType]);
+    if (session) {
+      loadPartyData();
+    }
+  }, [partyType, session]);
 
   /** derived: debtors per class */
   const debtors = React.useMemo(() => {
@@ -313,7 +347,7 @@ export default function App() {
   const onCloseAddExpense = () => setAddExpenseDialog({ open: false, term: null });
 
   /** Books inline */
-  const onBookEdit = (row: BookRow, field: string, type: string) => { 
+  const onBookEdit = (row: BookRow, field: string, type: string) => {
     setEditingRow(row);
     setEditingField(field);
     setEditBookRow({ ...row });
@@ -719,144 +753,160 @@ export default function App() {
     }
   };
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
       <CssBaseline />
       <ErrorBoundary>
-        <NavBar
-          navs={[...navs, ...customTabs.map(t => t.name)]}
-          currentNav={nav}
-          onNavigate={setNav}
-          onAddTab={() => setOpenCustomTabDialog(true)}
-          toggleTheme={toggleTheme}
-          darkMode={darkMode}
+        <AuthDialog 
+          open={authOpen} 
+          onAuthSuccess={() => setAuthOpen(false)}
         />
+        
+        {session && (
+          <>
+            <NavBar
+              navs={[...navs, ...customTabs.map(t => t.name)]}
+              currentNav={nav}
+              onNavigate={setNav}
+              onAddTab={() => setOpenCustomTabDialog(true)}
+              toggleTheme={toggleTheme}
+              darkMode={darkMode}
+              onLogout={() => supabase.auth.signOut()}
+            />
 
-        {nav === 'Dashboard' && (
-          <Dashboard
-            students={students}
-            payments={payments}
-            debtors={debtors}
-            terms={sessions}
-            tuition={tuition}
-            onEditTuition={onEditTuition}
-            onUpdateSession={onUpdateSession}
-          />
-        )}
-
-        {nav === 'Payments' && (
-          <Payments
-            payments={payments}
-            tuition={tuition}
-            debtors={debtors}
-            onEdit={handleEditPayment}
-            students={students}
-            onDeleteStudent={handleDeleteStudent}
-            onResetPayments={onResetPayments}
-          />
-        )}
-
-        {nav === 'Students' && (
-          <Students
-            students={students}
-            payments={payments}
-            onAdd={handleAddStudent}
-            onEdit={handleEditStudent}
-            onDeleteStudent={handleDeleteStudent}
-          />
-        )}
-
-        {nav === 'Debtors' && <Debtors debtors={debtors} />}
-
-        {nav === 'Books' && (
-          <Books
-            classList={CLASS_LIST as any}
-            studentsState={students}
-            booksState={booksRows}
-            booksSearch={booksSearch}
-            setBooksSearch={setBooksSearch}
-            editingRow={editingRow}
-            editingField={editingField}
-            editBookRow={editBookRow}
-            onBookEdit={onBookEdit}
-            onBookChange={onBookChange}
-            onBookSave={onBookSave}
-            onBookCancel={onBookCancel}
-          />
-        )}
-
-        {nav === 'Party' && (
-          <SchoolParty
-            classList={CLASS_LIST as any}
-            studentsState={students}
-            partySearch={partySearch}
-            setPartySearch={setPartySearch}
-            partyType={partyType}
-            setPartyType={setPartyType}
-            classAmounts={classAmounts}
-            studentDeposits={studentDeposits}
-            studentDates={studentDates}
-            handleAmountEdit={handleAmountEdit}
-            handleDepositEdit={handleDepositEdit}
-            handleDateEdit={handleDateEdit}
-            handleCopyPaid={handleCopyPaid}
-            copySuccess={copySuccess}
-          />
-        )}
-
-        {nav === 'Expenses' && (
-          <Expenses
-            expensesTabRows={expensesTabRows}
-            editingExpenseCell={editingExpenseCell}
-            editExpenseRow={editExpenseRow}
-            onExpenseEdit={onExpenseEdit}
-            onExpenseChange={onExpenseChange}
-            onExpenseSave={onExpenseSave}
-            onExpenseCancel={onExpenseCancel}
-            addExpenseDialog={addExpenseDialog}
-            newExpense={newExpense}
-            onOpenAddExpense={onOpenAddExpense}
-            onCloseAddExpense={onCloseAddExpense}
-            onAddExpenseSubmit={onAddExpenseSubmit}
-            onNewExpenseChange={onNewExpenseChange}
-          />
-        )}
-
-        {customTabs.some(t => t.name === nav) && 
-          (() => {
-            const tab = customTabs.find(t => t.name === nav);
-            return tab ? (
-              <CustomTabPage
-                tabName={nav}
-                columns={tab.columns || []}
-                rows={tab.rows || []}
-                allStudents={students}
-                onAddStudents={handleAddStudentsToCustomTab}
-                onDeleteTab={handleDeleteCustomTab}
-                onRenameTab={handleRenameTab}
-                onUpdateColumns={handleUpdateColumns}
-                onUpdateRow={handleUpdateRow}
-                onDeleteRow={(rowIndex) => handleDeleteRowFromCustomTab(rowIndex)}
-                onCellEdit={handleCellEdit}
-                preset={tab.preset}
-                onAddRow={tab.preset !== 'payment' ? () => handleAddNewRowToCustomTab(nav) : undefined}
+            {nav === 'Dashboard' && (
+              <Dashboard
+                students={students}
+                payments={payments}
+                debtors={debtors}
+                terms={sessions}
+                tuition={tuition}
+                onEditTuition={onEditTuition}
+                onUpdateSession={onUpdateSession}
               />
-            ) : null;
-          })()
-        }
+            )}
 
-        <Snackbar open={toast.open} autoHideDuration={2200} onClose={() => setToast(prev => ({ ...prev, open: false }))}>
-          <Alert severity={toast.severity} variant="filled">{toast.msg}</Alert>
-        </Snackbar>
+            {nav === 'Payments' && (
+              <Payments
+                payments={payments}
+                tuition={tuition}
+                debtors={debtors}
+                onEdit={handleEditPayment}
+                students={students}
+                onDeleteStudent={handleDeleteStudent}
+                onResetPayments={onResetPayments}
+              />
+            )}
 
-        <CustomTabDialog
-          open={openCustomTabDialog}
-          onClose={() => setOpenCustomTabDialog(false)}
-          onCreateTab={handleCreateCustomTab}
-          students={students}
-          classes={CLASS_LIST}
-        />
+            {nav === 'Students' && (
+              <Students
+                students={students}
+                payments={payments}
+                onAdd={handleAddStudent}
+                onEdit={handleEditStudent}
+                onDeleteStudent={handleDeleteStudent}
+              />
+            )}
+
+            {nav === 'Debtors' && <Debtors debtors={debtors} />}
+
+            {nav === 'Books' && (
+              <Books
+                classList={CLASS_LIST as any}
+                studentsState={students}
+                booksState={booksRows}
+                booksSearch={booksSearch}
+                setBooksSearch={setBooksSearch}
+                editingRow={editingRow}
+                editingField={editingField}
+                editBookRow={editBookRow}
+                onBookEdit={onBookEdit}
+                onBookChange={onBookChange}
+                onBookSave={onBookSave}
+                onBookCancel={onBookCancel}
+              />
+            )}
+
+            {nav === 'Party' && (
+              <SchoolParty
+                classList={CLASS_LIST as any}
+                studentsState={students}
+                partySearch={partySearch}
+                setPartySearch={setPartySearch}
+                partyType={partyType}
+                setPartyType={setPartyType}
+                classAmounts={classAmounts}
+                studentDeposits={studentDeposits}
+                studentDates={studentDates}
+                handleAmountEdit={handleAmountEdit}
+                handleDepositEdit={handleDepositEdit}
+                handleDateEdit={handleDateEdit}
+                handleCopyPaid={handleCopyPaid}
+                copySuccess={copySuccess}
+              />
+            )}
+
+            {nav === 'Expenses' && (
+              <Expenses
+                expensesTabRows={expensesTabRows}
+                editingExpenseCell={editingExpenseCell}
+                editExpenseRow={editExpenseRow}
+                onExpenseEdit={onExpenseEdit}
+                onExpenseChange={onExpenseChange}
+                onExpenseSave={onExpenseSave}
+                onExpenseCancel={onExpenseCancel}
+                addExpenseDialog={addExpenseDialog}
+                newExpense={newExpense}
+                onOpenAddExpense={onOpenAddExpense}
+                onCloseAddExpense={onCloseAddExpense}
+                onAddExpenseSubmit={onAddExpenseSubmit}
+                onNewExpenseChange={onNewExpenseChange}
+              />
+            )}
+
+            {customTabs.some(t => t.name === nav) && 
+              (() => {
+                const tab = customTabs.find(t => t.name === nav);
+                return tab ? (
+                  <CustomTabPage
+                    tabName={nav}
+                    columns={tab.columns || []}
+                    rows={tab.rows || []}
+                    allStudents={students}
+                    onAddStudents={handleAddStudentsToCustomTab}
+                    onDeleteTab={handleDeleteCustomTab}
+                    onRenameTab={handleRenameTab}
+                    onUpdateColumns={handleUpdateColumns}
+                    onUpdateRow={handleUpdateRow}
+                    onDeleteRow={(rowIndex) => handleDeleteRowFromCustomTab(rowIndex)}
+                    onCellEdit={handleCellEdit}
+                    preset={tab.preset}
+                    onAddRow={tab.preset !== 'payment' ? () => handleAddNewRowToCustomTab(nav) : undefined}
+                  />
+                ) : null;
+              })()
+            }
+
+            <Snackbar open={toast.open} autoHideDuration={2200} onClose={() => setToast(prev => ({ ...prev, open: false }))}>
+              <Alert severity={toast.severity} variant="filled">{toast.msg}</Alert>
+            </Snackbar>
+
+            <CustomTabDialog
+              open={openCustomTabDialog}
+              onClose={() => setOpenCustomTabDialog(false)}
+              onCreateTab={handleCreateCustomTab}
+              students={students}
+              classes={CLASS_LIST}
+            />
+          </>
+        )}
+        
       </ErrorBoundary>
+        <Footer />
     </ThemeProvider>
   );
 }

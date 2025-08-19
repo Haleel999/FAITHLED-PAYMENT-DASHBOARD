@@ -1,4 +1,4 @@
-/* Force Drawer background to be opaque */
+
 .MuiDrawer-paper {
   background-color: #fff !important;
 }
@@ -100,7 +100,7 @@ input:focus, select:focus, textarea:focus {
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
-}
+
 
 [data-theme="dark"] {
   /* Dark theme */
