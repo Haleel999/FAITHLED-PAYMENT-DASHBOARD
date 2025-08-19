@@ -31,6 +31,8 @@ const Party: React.FC<Props> = ({
 }) => {
   const [editingAmount, setEditingAmount] = React.useState<{class: string | null}>({class: null});
   const [tempAmount, setTempAmount] = React.useState('');
+  const [editingDeposit, setEditingDeposit] = React.useState<{id: number | null, value: string}>({id: null, value: ''});
+  const [editingDate, setEditingDate] = React.useState<{id: number | null, value: string}>({id: null, value: ''});
 
   // Filter and group students by class
   const studentsByClass = classList.reduce((acc, cls) => {
@@ -100,12 +102,12 @@ const Party: React.FC<Props> = ({
                       setEditingAmount({class: cls});
                       setTempAmount(String(classAmounts[cls] || '0'));
                     }}
+                    disabled={editingAmount.class !== null && editingAmount.class !== cls}
                   >
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </TableCell>
               </TableRow>
-              
               {editingAmount.class === cls && (
                 <TableRow>
                   <TableCell colSpan={6}>
@@ -120,29 +122,20 @@ const Party: React.FC<Props> = ({
                         }}
                         autoFocus
                         sx={{ width: 200 }}
-                      />
-                      <Button 
-                        variant="contained"
-                        size="small"
-                        onClick={() => {
-                          handleAmountEdit(cls, Number(tempAmount));
-                          setEditingAmount({class: null});
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAmountEdit(cls, Number(tempAmount));
+                            setEditingAmount({class: null});
+                          }
+                          if (e.key === 'Escape') setEditingAmount({class: null});
                         }}
-                      >
-                        Save
-                      </Button>
-                      <Button 
-                        variant="outlined"
-                        size="small"
-                        onClick={() => setEditingAmount({class: null})}
-                      >
-                        Cancel
-                      </Button>
+                      />
+                      <IconButton color="success" size="small" onClick={() => { handleAmountEdit(cls, Number(tempAmount)); setEditingAmount({class: null}); }} aria-label="Save">✓</IconButton>
+                      <IconButton color="inherit" size="small" onClick={() => setEditingAmount({class: null})} aria-label="Cancel">✕</IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
               )}
-              
               {students.map((student) => {
                 const deposit = studentDeposits[student.id] || 0;
                 const date = studentDates[student.id] || '';
@@ -155,30 +148,64 @@ const Party: React.FC<Props> = ({
                     <TableCell>{student.name}</TableCell>
                     <TableCell>{formatNaira(amount)}</TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <TextField
-                          size="small"
-                          value={deposit}
-                          onChange={(e) => handleDepositEdit(student.id, e.target.value)}
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">₦</InputAdornment>,
-                          }}
-                          sx={{ width: 120 }}
-                        />
-                      </Box>
+                      {editingDeposit.id === student.id ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <TextField
+                            size="small"
+                            value={editingDeposit.value}
+                            onChange={(e) => setEditingDeposit({id: student.id, value: e.target.value})}
+                            InputProps={{
+                              startAdornment: <InputAdornment position="start">₦</InputAdornment>,
+                            }}
+                            autoFocus
+                            sx={{ width: 120 }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleDepositEdit(student.id, editingDeposit.value);
+                                setEditingDeposit({id: null, value: ''});
+                              }
+                              if (e.key === 'Escape') setEditingDeposit({id: null, value: ''});
+                            }}
+                          />
+                          <IconButton color="success" size="small" onClick={() => { handleDepositEdit(student.id, editingDeposit.value); setEditingDeposit({id: null, value: ''}); }} aria-label="Save">✓</IconButton>
+                          <IconButton color="inherit" size="small" onClick={() => setEditingDeposit({id: null, value: ''})} aria-label="Cancel">✕</IconButton>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <span>{formatNaira(deposit)}</span>
+                          <IconButton size="small" color="primary" sx={{ ml: 1 }} onClick={() => setEditingDeposit({id: student.id, value: String(deposit)})} aria-label="Edit" disabled={editingDeposit.id !== null && editingDeposit.id !== student.id}> <EditIcon fontSize="small" /> </IconButton>
+                        </Box>
+                      )}
                     </TableCell>
                     <TableCell>{formatNaira(balance)}</TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <TextField
-                          size="small"
-                          type="date"
-                          value={date}
-                          onChange={(e) => handleDateEdit(student.id, e.target.value)}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{ width: 140 }}
-                        />
-                      </Box>
+                      {editingDate.id === student.id ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <TextField
+                            size="small"
+                            type="date"
+                            value={editingDate.value}
+                            onChange={(e) => setEditingDate({id: student.id, value: e.target.value})}
+                            InputLabelProps={{ shrink: true }}
+                            autoFocus
+                            sx={{ width: 140 }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleDateEdit(student.id, editingDate.value);
+                                setEditingDate({id: null, value: ''});
+                              }
+                              if (e.key === 'Escape') setEditingDate({id: null, value: ''});
+                            }}
+                          />
+                          <IconButton color="success" size="small" onClick={() => { handleDateEdit(student.id, editingDate.value); setEditingDate({id: null, value: ''}); }} aria-label="Save">✓</IconButton>
+                          <IconButton color="inherit" size="small" onClick={() => setEditingDate({id: null, value: ''})} aria-label="Cancel">✕</IconButton>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <span>{date}</span>
+                          <IconButton size="small" color="primary" sx={{ ml: 1 }} onClick={() => setEditingDate({id: student.id, value: date})} aria-label="Edit" disabled={editingDate.id !== null && editingDate.id !== student.id}> <EditIcon fontSize="small" /> </IconButton>
+                        </Box>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

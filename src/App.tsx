@@ -47,6 +47,22 @@ const darkTheme = createTheme({
 });
 
 export default function App() {
+  // Expense delete handler
+  const onExpenseDelete = async (term: 'first' | 'second' | 'third', id: number) => {
+    try {
+      // Remove from backend
+      await updateExpense(id, { deleted: true }); // Or use a deleteExpense API if available
+      // Remove from state
+      setExpensesTabRows(prev => {
+        const copy = { ...prev };
+        copy[term] = copy[term].filter(r => r.id !== id);
+        return copy;
+      });
+      setToast({ open: true, msg: 'Expense deleted', severity: 'success' });
+    } catch (e: any) {
+      setToast({ open: true, msg: e.message, severity: 'error' });
+    }
+  };
   const [darkMode, setDarkMode] = React.useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -804,6 +820,7 @@ export default function App() {
               onCloseAddExpense={onCloseAddExpense}
               onAddExpenseSubmit={onAddExpenseSubmit}
               onNewExpenseChange={onNewExpenseChange}
+              onExpenseDelete={onExpenseDelete}
             />
           )}
 

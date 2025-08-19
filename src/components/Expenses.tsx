@@ -4,11 +4,12 @@ import {
   DialogActions, TextField, IconButton, Table, TableHead, 
   TableRow, TableCell, TableBody 
 } from '@mui/material';
-import { EditIcon } from './Icons';
+import { EditIcon, DeleteIcon } from './Icons';
 import { ExpenseRow } from '../types';
 import { formatNairaExpense } from '../utils/format';
 
 interface Props {
+  onExpenseDelete: (term: 'first' | 'second' | 'third', id: number) => void;
   expensesTabRows: { first: ExpenseRow[]; second: ExpenseRow[]; third: ExpenseRow[] };
   editingExpenseCell: { term: string; id: number; field: string } | null;
   editExpenseRow: Partial<ExpenseRow>;
@@ -37,8 +38,10 @@ export default function Expenses({
   onOpenAddExpense,
   onCloseAddExpense,
   onAddExpenseSubmit,
-  onNewExpenseChange
+  onNewExpenseChange,
+  onExpenseDelete
 }: Props) {
+  const [deleteDialog, setDeleteDialog] = React.useState<{open: boolean, term: string | null, id: number | null}>({open: false, term: null, id: null});
   const render = (term: 'first' | 'second' | 'third', title: string) => (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', mt: term === 'first' ? 0 : 4, mb: 1 }}>
@@ -58,7 +61,6 @@ export default function Expenses({
           {expensesTabRows[term].map((row: ExpenseRow) => {
             const isEditing = editingExpenseCell?.term === term && editingExpenseCell?.id === row.id;
             const field = editingExpenseCell?.field;
-            
             return (
               <TableRow key={row.id}>
                 <TableCell>
@@ -142,12 +144,30 @@ export default function Expenses({
                       <IconButton size="small" sx={{ ml: 1 }} onClick={() => onExpenseEdit(term, row.id, 'NOTE')}>
                         <EditIcon />
                       </IconButton>
+                      <IconButton size="small" color="error" sx={{ ml: 1 }} onClick={() => setDeleteDialog({open: true, term, id: row.id})} aria-label="Delete">
+                        <DeleteIcon />
+                      </IconButton>
                     </Box>
                   )}
                 </TableCell>
               </TableRow>
             );
           })}
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({open: false, term: null, id: null})}>
+        <DialogTitle>Delete Expense</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this expense? This action cannot be undone.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({open: false, term: null, id: null})}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => {
+            if (deleteDialog.term && deleteDialog.id !== null) {
+              onExpenseDelete(deleteDialog.term as 'first' | 'second' | 'third', deleteDialog.id);
+            }
+            setDeleteDialog({open: false, term: null, id: null});
+          }}>Delete</Button>
+        </DialogActions>
+      </Dialog>
         </TableBody>
         </Table>
       </div>
