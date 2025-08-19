@@ -130,7 +130,7 @@ export default function Students({ students, onAdd, onEdit, onDeleteStudent }: {
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mt: 1 }}>
             <TextField label="First name" value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
             <TextField label="Last name" value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} />
-            <TextField label="Age" type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
+            <TextField label="Age" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
             <Select value={form.class} onChange={e => setForm({ ...form, class: e.target.value })} displayEmpty>
               <MenuItem value="">Select Class</MenuItem>
               {CLASS_LIST.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
