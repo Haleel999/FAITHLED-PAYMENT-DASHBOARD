@@ -47,22 +47,6 @@ const darkTheme = createTheme({
 });
 
 export default function App() {
-  // Expense delete handler
-  const onExpenseDelete = async (term: 'first' | 'second' | 'third', id: number) => {
-    try {
-      // Remove from backend
-      await updateExpense(id, { deleted: true }); // Or use a deleteExpense API if available
-      // Remove from state
-      setExpensesTabRows(prev => {
-        const copy = { ...prev };
-        copy[term] = copy[term].filter(r => r.id !== id);
-        return copy;
-      });
-      setToast({ open: true, msg: 'Expense deleted', severity: 'success' });
-    } catch (e: any) {
-      setToast({ open: true, msg: e.message, severity: 'error' });
-    }
-  };
   const [darkMode, setDarkMode] = React.useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -121,6 +105,29 @@ export default function App() {
     loadData();
   }, []);
 
+  // Add refreshPartyData function here
+  const refreshPartyData = async (eventType: string) => {
+    try {
+      const amounts = await fetchPartyClassAmounts(eventType);
+      setClassAmounts(amounts);
+      
+      const partyData = await fetchParty(eventType);
+      const deposits: Record<number, number> = {};
+      const dates: Record<number, string> = {};
+      
+      partyData.forEach(row => {
+        deposits[row.student_id] = row.deposit;
+        dates[row.student_id] = row.payment_date || '';
+      });
+      
+      setStudentDeposits(deposits);
+      setStudentDates(dates);
+    } catch (error) {
+      console.error('Failed to refresh party data:', error);
+      setToast({ open: true, msg: 'Failed to refresh party data', severity: 'error' });
+    }
+  };
+
   const loadData = async () => {
     try {
       const [stu, pay, tui, sess, books, tabs] = await Promise.all([
@@ -147,20 +154,7 @@ export default function App() {
       setExpensesTabRows({ first: f, second: s, third: t });
       
       // Load party data
-      const amounts = await fetchPartyClassAmounts(partyType);
-      setClassAmounts(amounts);
-      
-      const partyData = await fetchParty(partyType);
-      const deposits: Record<number, number> = {};
-      const dates: Record<number, string> = {};
-      
-      partyData.forEach(row => {
-        deposits[row.student_id] = row.deposit;
-        dates[row.student_id] = row.payment_date || '';
-      });
-      
-      setStudentDeposits(deposits);
-      setStudentDates(dates);
+      refreshPartyData(partyType);
     } catch (e: any) {
       setToast({ open: true, msg: e.message || 'Load failed', severity: 'error' });
     }
@@ -240,33 +234,33 @@ export default function App() {
   };
 
   /** Tuition */
-const onEditTuition = async (cls: ClassName, amount: number) => {
-  try {
-    await setTuition(cls, amount);
-    setTuitionState(prev => ({ ...prev, [cls]: amount }));
-    
-    // Update all payment records for this class
-    const updatedPayments = await Promise.all(
-      payments.map(async (p) => {
-        if (p.class === cls) {
-          return await editPayment({
-            ...p,
-            amount: amount,
-            status: p.is_scholarship ? 'scholarship' : 
-                   (p.amount_paid === amount) ? 'paid' :
-                   (p.amount_paid > 0) ? 'partial' : 'unpaid'
-          });
-        }
-        return p;
-      })
-    );
-    
-    setPayments(updatedPayments);
-    setToast({ open: true, msg: 'Tuition updated', severity: 'success' });
-  } catch (e: any) { 
-    setToast({ open: true, msg: e.message, severity: 'error' }); 
-  }
-};
+  const onEditTuition = async (cls: ClassName, amount: number) => {
+    try {
+      await setTuition(cls, amount);
+      setTuitionState(prev => ({ ...prev, [cls]: amount }));
+      
+      // Update all payment records for this class
+      const updatedPayments = await Promise.all(
+        payments.map(async (p) => {
+          if (p.class === cls) {
+            return await editPayment({
+              ...p,
+              amount: amount,
+              status: p.is_scholarship ? 'scholarship' : 
+                     (p.amount_paid === amount) ? 'paid' :
+                     (p.amount_paid > 0) ? 'partial' : 'unpaid'
+            });
+          }
+          return p;
+        })
+      );
+      
+      setPayments(updatedPayments);
+      setToast({ open: true, msg: 'Tuition updated', severity: 'success' });
+    } catch (e: any) { 
+      setToast({ open: true, msg: e.message, severity: 'error' }); 
+    }
+  };
 
   /** Expenses */
   const onExpenseEdit = (term: string, id: number, field: string) => {
@@ -330,6 +324,23 @@ const onEditTuition = async (cls: ClassName, amount: number) => {
   };
   
   const onCloseAddExpense = () => setAddExpenseDialog({ open: false, term: null });
+
+  // Expense delete handler
+  const onExpenseDelete = async (term: 'first' | 'second' | 'third', id: number) => {
+    try {
+      // Remove from backend
+      await updateExpense(id, { deleted: true }); // Or use a deleteExpense API if available
+      // Remove from state
+      setExpensesTabRows(prev => {
+        const copy = { ...prev };
+        copy[term] = copy[term].filter(r => r.id !== id);
+        return copy;
+      });
+      setToast({ open: true, msg: 'Expense deleted', severity: 'success' });
+    } catch (e: any) {
+      setToast({ open: true, msg: e.message, severity: 'error' });
+    }
+  };
 
   /** Books inline */
   const onBookEdit = (row: BookRow, field: string, type: string) => {
@@ -396,7 +407,7 @@ const onEditTuition = async (cls: ClassName, amount: number) => {
   const handleAmountEdit = async (cls: string, value: any) => {
     const amount = Number(value || 0);
     setClassAmounts(prev => ({ ...prev, [cls]: amount }));
-    
+
     // Save to database
     await upsertPartyClassAmount(cls, partyType, amount);
     
@@ -820,6 +831,7 @@ const onEditTuition = async (cls: ClassName, amount: number) => {
               handleDateEdit={handleDateEdit}
               handleCopyPaid={handleCopyPaid}
               copySuccess={copySuccess}
+              refreshPartyData={refreshPartyData}
             />
           )}
 

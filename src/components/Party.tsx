@@ -22,24 +22,29 @@ interface Props {
   handleDateEdit: (id: number, value: any) => void;
   handleCopyPaid: () => void;
   copySuccess: boolean;
+  refreshPartyData: (eventType: string) => void;
 }
 
 const Party: React.FC<Props> = ({
   classList, studentsState, partySearch, setPartySearch, partyType, setPartyType,
   classAmounts, studentDeposits, studentDates, handleAmountEdit, handleDepositEdit, handleDateEdit,
-  handleCopyPaid, copySuccess
+  handleCopyPaid, copySuccess, refreshPartyData
 }) => {
   const [editingAmount, setEditingAmount] = React.useState<{class: string | null}>({class: null});
   const [tempAmount, setTempAmount] = React.useState('');
   const [editingDeposit, setEditingDeposit] = React.useState<{id: number | null, value: string}>({id: null, value: ''});
   const [editingDate, setEditingDate] = React.useState<{id: number | null, value: string}>({id: null, value: ''});
 
-  // Reset editing states when event type changes
   React.useEffect(() => {
     setEditingAmount({class: null});
-    setEditingDeposit({id: null, value: ''});
-    setEditingDate({id: null, value: ''});
   }, [partyType]);
+
+  // Handle event type change
+  const handleEventTypeChange = (event: any) => {
+    const newEventType = event.target.value;
+    setPartyType(newEventType);
+    refreshPartyData(newEventType); // Call the refresh function
+  };
 
   // Filter and group students by class
   const studentsByClass = classList.reduce((acc, cls) => {
@@ -70,7 +75,7 @@ const Party: React.FC<Props> = ({
           <InputLabel>Event Type</InputLabel>
           <Select
             value={partyType}
-            onChange={e => setPartyType(e.target.value)}
+            onChange={handleEventTypeChange}
             label="Event Type"
           >
             <MenuItem value="End of Year Party">End of Year Party</MenuItem>
@@ -230,4 +235,4 @@ const Party: React.FC<Props> = ({
   );
 };
 
-export default Party; 
+export default Party;
