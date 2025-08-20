@@ -160,23 +160,25 @@ export default function Payments({
     setOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!editPayment) return;
-    
-    // If scholarship is checked, mark as fully paid
-    const amount_paid = form.is_scholarship 
-      ? editPayment.amount
-      : Number(form.amount_paid || 0);
-    
-    onEdit({
-      id: editPayment.id,
-      amount_paid: amount_paid,
-      payment_date: form.payment_date,
-      is_scholarship: form.is_scholarship
-    });
-    
-    setOpen(false);
-  };
+
+const handleSubmit = () => {
+  if (!editPayment) return;
+  
+  const amount_paid = form.is_scholarship 
+    ? editPayment.amount
+    : Number(form.amount_paid || 0);
+  
+  onEdit({
+    id: editPayment.id,
+    amount_paid: amount_paid,
+    payment_date: form.payment_date,
+    is_scholarship: form.is_scholarship
+  });
+  
+  setOpen(false);
+};
+
+
 
   const handleMarkFullyPaid = () => {
     if (!editPayment) return;

@@ -91,6 +91,7 @@ export async function editPayment(p: Partial<Payment> & { id: number }) {
     (p.amount_paid > 0) ? 'partial' : 'unpaid';
 
   const { data, error } = await supabase.from('payments').update({
+    student_id:p.student_id,
     amount: p.amount,
     amount_paid: p.amount_paid,
     status: status,

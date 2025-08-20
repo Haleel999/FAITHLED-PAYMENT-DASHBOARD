@@ -240,15 +240,33 @@ export default function App() {
   };
 
   /** Tuition */
-  const onEditTuition = async (cls: ClassName, amount: number) => {
-    try {
-      await setTuition(cls, amount);
-      setTuitionState(prev => ({ ...prev, [cls]: amount }));
-      setToast({ open: true, msg: 'Tuition updated', severity: 'success' });
-    } catch (e: any) { 
-      setToast({ open: true, msg: e.message, severity: 'error' }); 
-    }
-  };
+const onEditTuition = async (cls: ClassName, amount: number) => {
+  try {
+    await setTuition(cls, amount);
+    setTuitionState(prev => ({ ...prev, [cls]: amount }));
+    
+    // Update all payment records for this class
+    const updatedPayments = await Promise.all(
+      payments.map(async (p) => {
+        if (p.class === cls) {
+          return await editPayment({
+            ...p,
+            amount: amount,
+            status: p.is_scholarship ? 'scholarship' : 
+                   (p.amount_paid === amount) ? 'paid' :
+                   (p.amount_paid > 0) ? 'partial' : 'unpaid'
+          });
+        }
+        return p;
+      })
+    );
+    
+    setPayments(updatedPayments);
+    setToast({ open: true, msg: 'Tuition updated', severity: 'success' });
+  } catch (e: any) { 
+    setToast({ open: true, msg: e.message, severity: 'error' }); 
+  }
+};
 
   /** Expenses */
   const onExpenseEdit = (term: string, id: number, field: string) => {

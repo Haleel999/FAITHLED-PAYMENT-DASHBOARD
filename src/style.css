@@ -103,7 +103,6 @@ input:focus, select:focus, textarea:focus {
 
 
 [data-theme="dark"] {
-  /* Dark theme */
   --primary: #4d9eff;
   --primary-dark: #1a7cff;
   --accent: #ffdf40;
